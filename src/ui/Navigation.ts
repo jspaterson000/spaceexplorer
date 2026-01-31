@@ -33,12 +33,13 @@ export class Navigation {
   private targetBody: CelestialBody | null = null;
   private isFlying = false;
   private flyProgress = 0;
-  private flyDuration = 2000; // ms
+  private flyDuration = 3500; // ms - longer for elegance
   private flyStartTime = 0;
   private flyStartPos = new THREE.Vector3();
   private flyEndPos = new THREE.Vector3();
   private flyStartZoom = 0;
   private flyEndZoom = 0;
+  private flyMidZoom = 0; // Peak zoom out
 
   private dockElement: HTMLElement;
   private titleElement: HTMLElement;
@@ -112,7 +113,10 @@ export class Navigation {
     this.flyEndPos.copy(targetConfig.position());
     this.flyEndZoom = targetConfig.defaultZoom;
 
-    // Add zoom-out-in effect: first zoom out, then in
+    // Calculate elegant arc - zoom out to see both bodies
+    // Peak zoom is enough to see both Earth and Moon
+    this.flyMidZoom = 9.0; // ~1M km view
+
     this.titleElement.classList.add('transitioning');
   }
 
@@ -122,26 +126,40 @@ export class Navigation {
     const elapsed = performance.now() - this.flyStartTime;
     this.flyProgress = Math.min(elapsed / this.flyDuration, 1);
 
-    // Smooth easing (ease-in-out cubic)
-    const t = this.flyProgress < 0.5
-      ? 4 * this.flyProgress * this.flyProgress * this.flyProgress
-      : 1 - Math.pow(-2 * this.flyProgress + 2, 3) / 2;
+    // Ultra-smooth easing (custom bezier-like curve)
+    // Slow start, smooth middle, gentle end
+    const t = this.easeInOutQuart(this.flyProgress);
 
-    // Zoom out then in (parabolic)
-    const zoomOut = Math.sin(this.flyProgress * Math.PI) * 1.5;
-    const currentZoom = this.flyStartZoom + (this.flyEndZoom - this.flyStartZoom) * t + zoomOut;
+    // Elegant zoom arc: smooth rise and fall
+    // Use sine for natural arc, peaks at 0.4 progress for visual appeal
+    const zoomArc = Math.sin(this.flyProgress * Math.PI);
+    const zoomPeak = this.flyMidZoom - Math.min(this.flyStartZoom, this.flyEndZoom);
 
-    // Update camera target position
-    this.camera.setTarget(
-      this.flyEndPos.x * t + this.flyStartPos.x * (1 - t) * 0, // Smoothly move to target
-      this.flyEndPos.y * t,
-      this.flyEndPos.z * t
-    );
+    // Blend between start->peak->end zoom
+    let currentZoom: number;
+    if (this.flyProgress < 0.5) {
+      // First half: ease from start to peak
+      const halfT = this.easeOutCubic(this.flyProgress * 2);
+      currentZoom = this.flyStartZoom + (this.flyMidZoom - this.flyStartZoom) * halfT;
+    } else {
+      // Second half: ease from peak to end
+      const halfT = this.easeInCubic((this.flyProgress - 0.5) * 2);
+      currentZoom = this.flyMidZoom + (this.flyEndZoom - this.flyMidZoom) * halfT;
+    }
+
+    // Smoothly interpolate target position
+    const targetX = this.flyEndPos.x * t;
+    const targetY = this.flyEndPos.y * t;
+    const targetZ = this.flyEndPos.z * t;
+
+    this.camera.setTarget(targetX, targetY, targetZ);
     this.camera.setZoom(currentZoom);
 
-    // Update title at midpoint
-    if (this.flyProgress >= 0.5 && this.titleElement.textContent !== BODIES[this.targetBody].name) {
-      this.titleElement.textContent = BODIES[this.targetBody].name;
+    // Update title at midpoint with fade
+    if (this.flyProgress >= 0.45 && this.flyProgress <= 0.55) {
+      if (this.titleElement.textContent !== BODIES[this.targetBody].name) {
+        this.titleElement.textContent = BODIES[this.targetBody].name;
+      }
     }
 
     // Complete
@@ -156,6 +174,19 @@ export class Navigation {
         this.onBodyChange(this.currentBody);
       }
     }
+  }
+
+  // Easing functions for elegant motion
+  private easeInOutQuart(t: number): number {
+    return t < 0.5 ? 8 * t * t * t * t : 1 - Math.pow(-2 * t + 2, 4) / 2;
+  }
+
+  private easeOutCubic(t: number): number {
+    return 1 - Math.pow(1 - t, 3);
+  }
+
+  private easeInCubic(t: number): number {
+    return t * t * t;
   }
 
   getCurrentBody(): CelestialBody {

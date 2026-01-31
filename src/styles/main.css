@@ -182,11 +182,12 @@ html, body {
 
 /* Title transition */
 #title-card .title {
-  transition: opacity 0.3s ease;
+  transition: opacity 0.8s ease, transform 0.8s ease;
 }
 
 #title-card .title.transitioning {
-  opacity: 0.3;
+  opacity: 0.15;
+  transform: translateY(-5px);
 }
 
 #hud {
