@@ -19,13 +19,12 @@ export class Earth {
     #include <logdepthbuf_pars_vertex>
 
     varying vec2 vUv;
-    varying vec3 vNormal;
-    varying vec3 vPosition;
+    varying vec3 vNormalWorld;
 
     void main() {
       vUv = uv;
-      vNormal = normalize(normalMatrix * normal);
-      vPosition = (modelMatrix * vec4(position, 1.0)).xyz;
+      // Keep normal in world space to match sun direction
+      vNormalWorld = normalize((modelMatrix * vec4(normal, 0.0)).xyz);
       gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
 
       #include <logdepthbuf_vertex>
@@ -46,13 +45,12 @@ export class Earth {
     uniform bool hasClouds;
 
     varying vec2 vUv;
-    varying vec3 vNormal;
-    varying vec3 vPosition;
+    varying vec3 vNormalWorld;
 
     void main() {
       #include <logdepthbuf_fragment>
 
-      vec3 normal = normalize(vNormal);
+      vec3 normal = normalize(vNormalWorld);
       float sunDot = dot(normal, sunDirection);
       float dayFactor = smoothstep(-0.1, 0.2, sunDot);
 
