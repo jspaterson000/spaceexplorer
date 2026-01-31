@@ -161,36 +161,87 @@ export class MissionPreview {
     const moonPos = this.moonPosition();
     const moonDist = moonPos.length();
 
-    // Simple, clean free-return trajectory
-    // All in the XZ plane for clarity, with Moon along X axis direction
     const points: THREE.Vector3[] = [];
+
+    const EARTH_RADIUS = 6_371_000;
+    const PARKING_ORBIT_RADIUS = EARTH_RADIUS * 1.8; // Low Earth orbit ~400km altitude scaled
+    const MOON_RADIUS = 1_737_000 * 3; // Visual radius
+    const FLYBY_DIST = MOON_RADIUS * 2.5; // Close flyby distance
 
     // Normalize moon direction
     const toMoon = moonPos.clone().normalize();
-    // Perpendicular in XZ plane
+    // Perpendicular in XZ plane (for orbit plane)
     const perp = new THREE.Vector3(-toMoon.z, 0, toMoon.x).normalize();
 
-    const EARTH_RADIUS = 6_371_000;
-    const MOON_RADIUS = 1_737_000 * 3; // Visual radius
-    const FLYBY_DIST = MOON_RADIUS * 3; // Safe distance around Moon
+    // Phase 1: Earth parking orbit (1.5 orbits for systems check)
+    const orbitPoints = 60;
+    const orbitRevolutions = 1.5;
+    for (let i = 0; i <= orbitPoints; i++) {
+      const angle = (i / orbitPoints) * Math.PI * 2 * orbitRevolutions;
+      const x = Math.cos(angle) * PARKING_ORBIT_RADIUS;
+      const z = Math.sin(angle) * PARKING_ORBIT_RADIUS;
+      points.push(new THREE.Vector3(x, 0, z));
+    }
 
-    // Control points for a smooth Bezier-like trajectory
-    const p0 = new THREE.Vector3(0, 0, 0); // Earth
-    const p1 = perp.clone().multiplyScalar(moonDist * 0.3); // Outbound curve control
-    const p2 = moonPos.clone().add(perp.clone().multiplyScalar(moonDist * 0.2)); // Approach Moon
-    const p3 = moonPos.clone().add(toMoon.clone().multiplyScalar(FLYBY_DIST)); // Far side of Moon
-    const p4 = moonPos.clone().add(perp.clone().multiplyScalar(-moonDist * 0.2)); // Departing Moon
-    const p5 = perp.clone().multiplyScalar(-moonDist * 0.25); // Return curve control
-    const p6 = new THREE.Vector3(0, 0, 0); // Back to Earth
+    // Get TLI departure point (where we leave Earth orbit)
+    const tliPoint = points[points.length - 1].clone();
 
-    // Generate smooth curve through these points
-    const controlPoints = [p0, p1, p2, p3, p4, p5, p6];
-    const curve = new THREE.CatmullRomCurve3(controlPoints, false, 'catmullrom', 0.5);
+    // Phase 2: Trans-lunar trajectory using smooth curve
+    // Control points for outbound journey
+    const outboundControl1 = tliPoint.clone().add(
+      tliPoint.clone().normalize().multiplyScalar(moonDist * 0.2)
+    );
+    const outboundControl2 = moonPos.clone().sub(toMoon.clone().multiplyScalar(moonDist * 0.3));
 
-    // Sample the curve
-    for (let i = 0; i <= 100; i++) {
-      const t = i / 100;
-      points.push(curve.getPoint(t));
+    // Approach point (before lunar flyby)
+    const approachPoint = moonPos.clone().sub(toMoon.clone().multiplyScalar(FLYBY_DIST));
+
+    // Outbound curve
+    const outboundCurve = new THREE.CubicBezierCurve3(
+      tliPoint,
+      outboundControl1,
+      outboundControl2,
+      approachPoint
+    );
+    for (let i = 1; i <= 40; i++) {
+      points.push(outboundCurve.getPoint(i / 40));
+    }
+
+    // Phase 3: Lunar flyby - arc around the far side of Moon
+    const flybyPoints = 30;
+    for (let i = 0; i <= flybyPoints; i++) {
+      const angle = -Math.PI * 0.5 + (i / flybyPoints) * Math.PI; // 180 degree arc
+      // Orbit in the plane containing Earth-Moon line
+      const offset = new THREE.Vector3(
+        toMoon.x * Math.cos(angle) + perp.x * Math.sin(angle),
+        0,
+        toMoon.z * Math.cos(angle) + perp.z * Math.sin(angle)
+      ).multiplyScalar(FLYBY_DIST);
+      points.push(moonPos.clone().add(offset));
+    }
+
+    // Departure point (after lunar flyby)
+    const departPoint = points[points.length - 1].clone();
+
+    // Phase 4: Return trajectory
+    const returnControl1 = departPoint.clone().add(
+      departPoint.clone().sub(moonPos).normalize().multiplyScalar(moonDist * 0.2)
+    );
+    const returnControl2 = perp.clone().multiplyScalar(-PARKING_ORBIT_RADIUS * 2);
+    const splashdown = new THREE.Vector3(
+      -PARKING_ORBIT_RADIUS * 0.8,
+      0,
+      -PARKING_ORBIT_RADIUS * 0.5
+    );
+
+    const returnCurve = new THREE.CubicBezierCurve3(
+      departPoint,
+      returnControl1,
+      returnControl2,
+      splashdown
+    );
+    for (let i = 1; i <= 40; i++) {
+      points.push(returnCurve.getPoint(i / 40));
     }
 
     this.trajectoryPoints = points;
