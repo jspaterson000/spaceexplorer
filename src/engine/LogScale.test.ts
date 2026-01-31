@@ -47,4 +47,29 @@ describe('LogScale', () => {
       expect(LogScale.formatDistance(1_500)).toBe('1.5 km');
     });
   });
+
+  describe('orrery scaling', () => {
+    it('applies square root to orbit distance', () => {
+      // Earth at 1 AU stays at 1
+      expect(LogScale.orreryOrbitScale(1)).toBeCloseTo(1, 5);
+      // Neptune at 30 AU becomes ~5.48
+      expect(LogScale.orreryOrbitScale(30)).toBeCloseTo(5.477, 2);
+      // Mercury at 0.39 AU becomes ~0.62
+      expect(LogScale.orreryOrbitScale(0.39)).toBeCloseTo(0.624, 2);
+    });
+
+    it('compresses planet size ratios', () => {
+      // Jupiter real = 11x Earth, orrery = ~3x
+      const jupiterReal = 11;
+      const earthReal = 1;
+      const jupiterOrrery = LogScale.orreryPlanetScale(jupiterReal);
+      const earthOrrery = LogScale.orreryPlanetScale(earthReal);
+      expect(jupiterOrrery / earthOrrery).toBeCloseTo(3, 0);
+
+      // Mercury real = 0.38x Earth, orrery = ~0.65x
+      const mercuryReal = 0.38;
+      const mercuryOrrery = LogScale.orreryPlanetScale(mercuryReal);
+      expect(mercuryOrrery / earthOrrery).toBeCloseTo(0.65, 1);
+    });
+  });
 });

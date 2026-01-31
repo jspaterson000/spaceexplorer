@@ -21,4 +21,26 @@ export const LogScale = {
     }
     return `${Math.round(km)} km`;
   },
+
+  /**
+   * Square-root scaling for orrery orbit distances
+   * Input: distance in AU (or any unit)
+   * Output: compressed distance
+   */
+  orreryOrbitScale(distanceAU: number): number {
+    return Math.sqrt(distanceAU);
+  },
+
+  /**
+   * Compress planet size ratios for orrery view
+   * Uses cube root to compress 11x -> ~3x, 0.38x -> ~0.7x
+   * Input: relative size (Earth = 1)
+   * Output: compressed relative size
+   */
+  orreryPlanetScale(relativeSize: number): number {
+    // Cube root compresses the range nicely
+    // 11^(1/3) ≈ 2.22, but we want ~3, so use 0.45 power
+    // 0.38^0.45 ≈ 0.66
+    return Math.pow(relativeSize, 0.45);
+  },
 } as const;
