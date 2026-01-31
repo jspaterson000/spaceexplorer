@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { Camera } from '../engine/Camera';
 import { LogScale } from '../engine/LogScale';
 
-export type CelestialBody = 'earth' | 'moon';
+export type CelestialBody = 'earth' | 'moon' | 'sun';
 
 interface BodyConfig {
   name: string;
@@ -25,6 +25,12 @@ const BODIES: Record<CelestialBody, BodyConfig> = {
     radius: 1_737_000 * 3, // Visual radius (scaled)
     defaultZoom: 7.3, // Further out to see the whole Moon
   },
+  sun: {
+    name: 'Sun',
+    position: () => new THREE.Vector3(0, 0, 0), // Will be updated dynamically
+    radius: 696_340_000 * 0.5, // Half real size for visual balance
+    defaultZoom: 9.5, // Good viewing distance for the Sun
+  },
 };
 
 export class Navigation {
@@ -45,8 +51,9 @@ export class Navigation {
   private titleElement: HTMLElement;
   private onBodyChange: ((body: CelestialBody) => void) | null = null;
 
-  // Reference to Moon mesh for dynamic position
+  // Reference to meshes for dynamic position
   private moonMesh: THREE.Object3D | null = null;
+  private sunMesh: THREE.Object3D | null = null;
 
   constructor(camera: Camera) {
     this.camera = camera;
@@ -58,8 +65,12 @@ export class Navigation {
 
   setMoonMesh(mesh: THREE.Object3D): void {
     this.moonMesh = mesh;
-    // Update moon position getter
     BODIES.moon.position = () => mesh.position.clone();
+  }
+
+  setSunMesh(mesh: THREE.Object3D): void {
+    this.sunMesh = mesh;
+    BODIES.sun.position = () => mesh.position.clone();
   }
 
   private setupDock(): void {
@@ -79,6 +90,10 @@ export class Navigation {
 
   private renderDock(): void {
     this.dockElement.innerHTML = `
+      <div class="dock-item ${this.currentBody === 'sun' ? 'active' : ''}" data-body="sun">
+        <span class="dock-indicator"></span>
+        <span class="dock-name">Sun</span>
+      </div>
       <div class="dock-item ${this.currentBody === 'earth' ? 'active' : ''}" data-body="earth">
         <span class="dock-indicator"></span>
         <span class="dock-name">Earth</span>
@@ -113,9 +128,15 @@ export class Navigation {
     this.flyEndTarget.copy(targetConfig.position());
     this.flyEndZoom = targetConfig.defaultZoom;
 
-    // Calculate elegant arc - zoom out to see both bodies
-    // Peak zoom is enough to see both Earth and Moon
-    this.flyMidZoom = 9.0; // ~1M km view
+    // Calculate elegant arc - zoom out based on journey distance
+    const isSunJourney = body === 'sun' || this.currentBody === 'sun';
+    if (isSunJourney) {
+      this.flyMidZoom = 11.0; // ~100M km view for sun journeys
+      this.flyDuration = 5000; // Longer journey to the sun
+    } else {
+      this.flyMidZoom = 9.0; // ~1M km view for Earth-Moon
+      this.flyDuration = 3500;
+    }
 
     this.titleElement.classList.add('transitioning');
   }
@@ -202,7 +223,12 @@ export class Navigation {
   }
 
   // Check if a click hits a celestial body
-  checkBodyClick(raycaster: THREE.Raycaster, meshes: { earth: THREE.Object3D; moon: THREE.Object3D }): CelestialBody | null {
+  checkBodyClick(raycaster: THREE.Raycaster, meshes: { earth: THREE.Object3D; moon: THREE.Object3D; sun: THREE.Object3D }): CelestialBody | null {
+    const sunIntersects = raycaster.intersectObject(meshes.sun, true);
+    if (sunIntersects.length > 0 && this.currentBody !== 'sun') {
+      return 'sun';
+    }
+
     const earthIntersects = raycaster.intersectObject(meshes.earth);
     if (earthIntersects.length > 0 && this.currentBody !== 'earth') {
       return 'earth';

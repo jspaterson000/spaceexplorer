@@ -6,6 +6,7 @@ import { Camera } from './engine/Camera';
 import { LogScale } from './engine/LogScale';
 import { Earth } from './objects/Earth';
 import { Moon } from './objects/Moon';
+import { Sun } from './objects/Sun';
 import { Satellites } from './objects/Satellites';
 import { SatelliteWorker } from './data/SatelliteWorker';
 import { fetchAllTLEs } from './data/celestrak';
@@ -32,11 +33,16 @@ earth.addToScene(scene);
 const moon = new Moon();
 moon.addToScene(scene);
 
+// Sun
+const sun = new Sun();
+sun.addToScene(scene);
+
 // Navigation
 const navigation = new Navigation(orbitCamera);
 navigation.setMoonMesh(moon.mesh);
+navigation.setSunMesh(sun.mesh);
 navigation.setOnBodyChange((body) => {
-  // Hide satellites when viewing Moon (they're Earth satellites)
+  // Hide satellites when not viewing Earth (they're Earth satellites)
   satellites.mesh.visible = body === 'earth';
 });
 
@@ -173,6 +179,7 @@ function handleSatelliteClick(event: MouseEvent) {
   const bodyClicked = navigation.checkBodyClick(raycaster, {
     earth: earth.mesh,
     moon: moon.mesh,
+    sun: sun.mesh,
   });
 
   if (bodyClicked) {

@@ -34,7 +34,7 @@ export class Camera {
       near = 1,
       far = 1e15,
       minZoom = 6.5, // ~3000km - just above Earth surface
-      maxZoom = 9,   // ~1M km - edge of Phase 1
+      maxZoom = 11,  // ~100M km - enough to see Sun journey
       initialZoom = 7.5, // ~30,000 km
       damping = 0.08, // Smoother interpolation
       autoRotateSpeed = 0.0003, // Subtle cinematic drift
