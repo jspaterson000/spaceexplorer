@@ -27,6 +27,7 @@ export class Camera {
   private readonly maxZoom: number;
   private readonly damping: number;
   private readonly autoRotateSpeed: number;
+  private autoRotateEnabled = true;
 
   constructor(config: CameraConfig = {}) {
     const {
@@ -78,6 +79,9 @@ export class Camera {
   }
 
   rotate(deltaAzimuth: number, deltaPolar: number): void {
+    // Stop auto-rotation on first manual interaction
+    this.autoRotateEnabled = false;
+
     // theta = azimuthal angle (horizontal rotation around Y axis)
     this.targetSpherical.theta += deltaAzimuth;
     // phi = polar angle (vertical tilt, clamped to avoid gimbal lock)
@@ -106,9 +110,11 @@ export class Camera {
   }
 
   update(): void {
-    // Cinematic auto-rotation
-    this.targetSpherical.theta += this.autoRotateSpeed;
-    this.spherical.theta += this.autoRotateSpeed;
+    // Cinematic auto-rotation (until first manual interaction)
+    if (this.autoRotateEnabled) {
+      this.targetSpherical.theta += this.autoRotateSpeed;
+      this.spherical.theta += this.autoRotateSpeed;
+    }
 
     // Smooth interpolation
     this._logDistance += (this.targetLogDistance - this._logDistance) * this.damping;

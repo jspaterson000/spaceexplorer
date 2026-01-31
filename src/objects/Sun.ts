@@ -93,14 +93,15 @@ export class Sun {
     const flareHexTexture = this.createHexagonTexture(128);
 
     // Main sun flare - large and bright
-    this.lensflare.addElement(new LensflareElement(flareTexture, 700, 0, new THREE.Color(0xffffff)));
-    this.lensflare.addElement(new LensflareElement(flareTexture, 300, 0, new THREE.Color(0xffcc66)));
+    this.lensflare.addElement(new LensflareElement(flareTexture, 1200, 0, new THREE.Color(0xffffff)));
+    this.lensflare.addElement(new LensflareElement(flareTexture, 800, 0, new THREE.Color(0xffffcc)));
+    this.lensflare.addElement(new LensflareElement(flareTexture, 500, 0, new THREE.Color(0xffcc66)));
 
     // Secondary flares along the line
-    this.lensflare.addElement(new LensflareElement(flareRingTexture, 60, 0.6, new THREE.Color(0xff9933)));
-    this.lensflare.addElement(new LensflareElement(flareHexTexture, 80, 0.7, new THREE.Color(0xff6600)));
-    this.lensflare.addElement(new LensflareElement(flareRingTexture, 120, 0.9, new THREE.Color(0xffaa44)));
-    this.lensflare.addElement(new LensflareElement(flareHexTexture, 50, 1.0, new THREE.Color(0xff8833)));
+    this.lensflare.addElement(new LensflareElement(flareRingTexture, 100, 0.6, new THREE.Color(0xffbb55)));
+    this.lensflare.addElement(new LensflareElement(flareHexTexture, 140, 0.7, new THREE.Color(0xffaa44)));
+    this.lensflare.addElement(new LensflareElement(flareRingTexture, 180, 0.9, new THREE.Color(0xffcc66)));
+    this.lensflare.addElement(new LensflareElement(flareHexTexture, 80, 1.0, new THREE.Color(0xffaa33)));
 
     this.mesh.add(this.lensflare);
 
