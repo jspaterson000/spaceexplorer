@@ -5,6 +5,7 @@ import { Renderer } from './engine/Renderer';
 import { Camera } from './engine/Camera';
 import { LogScale } from './engine/LogScale';
 import { Earth } from './objects/Earth';
+import { Moon } from './objects/Moon';
 import { Satellites } from './objects/Satellites';
 import { SatelliteWorker } from './data/SatelliteWorker';
 import { fetchAllTLEs } from './data/celestrak';
@@ -25,6 +26,10 @@ scene.add(ambientLight);
 // Earth
 const earth = new Earth();
 earth.addToScene(scene);
+
+// Moon
+const moon = new Moon();
+moon.addToScene(scene);
 
 // Satellites
 const satellites = new Satellites(renderer.capabilities.maxSatellites);
@@ -212,6 +217,10 @@ function animate() {
 
   orbitCamera.update();
   earth.update(time);
+
+  // Sync Moon with Earth's sun direction and update orbital position
+  moon.updatePosition();
+  moon.setSunDirection(earth.sunDirection);
 
   // Request new satellite positions
   worker.requestPositions(now);

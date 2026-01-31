@@ -188,6 +188,10 @@ export class Earth {
     // The day/night terminator moves as real time passes
   }
 
+  get sunDirection(): THREE.Vector3 {
+    return this.material.uniforms.sunDirection.value;
+  }
+
   addToScene(scene: THREE.Scene): void {
     scene.add(this.mesh);
     scene.add(this.atmosphere);
