@@ -4,10 +4,26 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cosmic Explorer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/src/styles/main.css">
 </head>
 <body>
   <canvas id="canvas"></canvas>
+  <div id="title-card">
+    <h1 class="title">Earth</h1>
+    <div class="stats">
+      <div class="stat-row">
+        <span class="stat-value" id="stat-satellites">—</span>
+        <span class="stat-label">satellites tracked</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-value" id="stat-altitude">—</span>
+        <span class="stat-label">viewing altitude</span>
+      </div>
+    </div>
+  </div>
   <div id="hud"></div>
   <div id="info-card"></div>
   <script type="module" src="/src/main.ts"></script>

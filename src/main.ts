@@ -58,7 +58,6 @@ infoCard.onClose(() => {
 
 // Load satellite data
 async function loadSatellites() {
-  const hud = document.getElementById('hud')!;
   console.log('[Satellites] Starting load...');
 
   // Try cache first
@@ -77,7 +76,6 @@ async function loadSatellites() {
 
   if (isStale || tles.length === 0) {
     try {
-      hud.innerHTML = '<div style="color: var(--stardust);">Loading satellite data...</div>';
       console.log('[Satellites] Fetching from CelesTrak...');
       tles = await fetchAllTLEs();
       console.log(`[Satellites] Fetched ${tles.length} TLEs from CelesTrak`);
@@ -195,17 +193,14 @@ function handleSatelliteClick(event: MouseEvent) {
   }
 }
 
-// HUD
-const hud = document.getElementById('hud')!;
-function updateHUD() {
+// Stats display
+const statSatellites = document.getElementById('stat-satellites')!;
+const statAltitude = document.getElementById('stat-altitude')!;
+
+function updateStats() {
   const altitude = orbitCamera.distanceMeters - 6_371_000;
-  hud.innerHTML = `
-    <div style="color: var(--stardust); font-size: 14px;">
-      <div style="color: var(--starlight);">${satellites.count.toLocaleString()} satellites</div>
-      <div style="margin-top: 8px;">Altitude: ${LogScale.formatDistance(Math.max(0, altitude))}</div>
-      <div style="opacity: 0.6; font-size: 12px; margin-top: 4px;">Scroll to zoom • Drag to rotate</div>
-    </div>
-  `;
+  statSatellites.textContent = satellites.count.toLocaleString();
+  statAltitude.textContent = LogScale.formatDistance(Math.max(0, altitude));
 }
 
 let startTime = performance.now();
@@ -222,7 +217,7 @@ function animate() {
   worker.requestPositions(now);
 
   renderer.render(scene, orbitCamera.camera);
-  updateHUD();
+  updateStats();
 }
 
 window.addEventListener('resize', () => {
