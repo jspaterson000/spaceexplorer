@@ -270,13 +270,8 @@ export class MissionPreview {
       this.trajectoryLine.visible = true;
     }
 
-    // Hide other UI elements
-    const titleCard = document.getElementById('title-card');
-    const journeyDock = document.getElementById('journey-dock');
-    const missionBtn = this.container.querySelector('.mission-start-btn') as HTMLElement;
-    if (titleCard) titleCard.style.opacity = '0';
-    if (journeyDock) journeyDock.style.opacity = '0';
-    if (missionBtn) missionBtn.style.opacity = '0';
+    // Hide other UI elements via body class
+    document.body.classList.add('mission-active');
 
     this.updatePhaseDisplay();
   }
@@ -289,12 +284,7 @@ export class MissionPreview {
     }
 
     // Restore UI elements
-    const titleCard = document.getElementById('title-card');
-    const journeyDock = document.getElementById('journey-dock');
-    const missionBtn = this.container.querySelector('.mission-start-btn') as HTMLElement;
-    if (titleCard) titleCard.style.opacity = '1';
-    if (journeyDock) journeyDock.style.opacity = '1';
-    if (missionBtn) missionBtn.style.opacity = '1';
+    document.body.classList.remove('mission-active');
   }
 
   private updatePhaseDisplay(): void {
