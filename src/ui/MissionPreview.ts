@@ -159,48 +159,78 @@ export class MissionPreview {
 
   private updateTrajectoryPoints(): void {
     const moonPos = this.moonPosition();
+    const moonDist = moonPos.length();
+    const moonDir = moonPos.clone().normalize();
+
+    // Create perpendicular vectors for the trajectory plane
+    const up = new THREE.Vector3(0, 1, 0);
+    const perpendicular = new THREE.Vector3().crossVectors(moonDir, up).normalize();
+
     const points: THREE.Vector3[] = [];
+    const EARTH_RADIUS = 6_371_000;
+    const MOON_FLYBY_ALTITUDE = 10_000_000; // Close flyby distance
 
-    // Earth orbit
-    for (let i = 0; i <= 10; i++) {
-      const angle = (i / 10) * Math.PI * 0.3;
-      const r = 6_371_000 * 2;
-      points.push(new THREE.Vector3(
-        Math.cos(angle) * r,
-        Math.sin(angle) * r * 0.3,
-        Math.sin(angle) * r
-      ));
+    // Phase 1: Earth parking orbit (small circle near Earth)
+    const parkingOrbitRadius = EARTH_RADIUS * 1.5;
+    for (let i = 0; i <= 8; i++) {
+      const angle = (i / 8) * Math.PI * 0.4 - Math.PI * 0.2;
+      const x = Math.cos(angle) * parkingOrbitRadius;
+      const z = Math.sin(angle) * parkingOrbitRadius;
+      points.push(new THREE.Vector3(x, 0, z));
     }
 
-    // Outbound to Moon
-    const lastEarthPoint = points[points.length - 1];
-    for (let i = 1; i <= 20; i++) {
-      const t = i / 20;
-      const x = lastEarthPoint.x + (moonPos.x - lastEarthPoint.x) * t;
-      const y = lastEarthPoint.y + (moonPos.y - lastEarthPoint.y) * t + Math.sin(t * Math.PI) * moonPos.length() * 0.1;
-      const z = lastEarthPoint.z + (moonPos.z - lastEarthPoint.z) * t;
-      points.push(new THREE.Vector3(x, y, z));
+    // Phase 2: Outbound trajectory - curve out toward Moon
+    const startPoint = points[points.length - 1].clone();
+    for (let i = 1; i <= 30; i++) {
+      const t = i / 30;
+      // Bezier curve from Earth to Moon with outward arc
+      const arcHeight = moonDist * 0.15 * Math.sin(t * Math.PI);
+      const pos = new THREE.Vector3().lerpVectors(
+        startPoint,
+        moonPos,
+        t
+      );
+      // Add arc perpendicular to the Earth-Moon line
+      pos.add(perpendicular.clone().multiplyScalar(arcHeight));
+      pos.y += Math.sin(t * Math.PI) * moonDist * 0.05;
+      points.push(pos);
     }
 
-    // Around Moon (flyby)
-    const moonRadius = 1_737_000 * 3 * 2;
-    for (let i = 0; i <= 15; i++) {
-      const angle = Math.PI * 0.8 + (i / 15) * Math.PI * 0.8;
-      points.push(new THREE.Vector3(
-        moonPos.x + Math.cos(angle) * moonRadius,
-        moonPos.y + Math.sin(i / 15 * Math.PI) * moonRadius * 0.2,
-        moonPos.z + Math.sin(angle) * moonRadius
-      ));
+    // Phase 3: Lunar flyby - swing around the far side
+    const flybyRadius = MOON_FLYBY_ALTITUDE;
+    const flybyCenter = moonPos.clone();
+    // Calculate the approach direction
+    const approachDir = points[points.length - 1].clone().sub(moonPos).normalize();
+
+    for (let i = 0; i <= 20; i++) {
+      const angle = Math.PI * 0.3 + (i / 20) * Math.PI * 1.4; // Swing around ~250 degrees
+      // Rotate around Moon in the plane defined by approach
+      const localX = Math.cos(angle) * flybyRadius;
+      const localZ = Math.sin(angle) * flybyRadius;
+
+      const pos = moonPos.clone();
+      pos.add(moonDir.clone().multiplyScalar(localZ));
+      pos.add(perpendicular.clone().multiplyScalar(localX));
+      pos.y += Math.sin((i / 20) * Math.PI) * flybyRadius * 0.3;
+      points.push(pos);
     }
 
-    // Return to Earth
-    const lastMoonPoint = points[points.length - 1];
-    for (let i = 1; i <= 20; i++) {
-      const t = i / 20;
-      const x = lastMoonPoint.x + (0 - lastMoonPoint.x) * t;
-      const y = lastMoonPoint.y + (0 - lastMoonPoint.y) * t - Math.sin(t * Math.PI) * moonPos.length() * 0.08;
-      const z = lastMoonPoint.z + (0 - lastMoonPoint.z) * t;
-      points.push(new THREE.Vector3(x, y, z));
+    // Phase 4: Return trajectory - curve back to Earth
+    const returnStart = points[points.length - 1].clone();
+    const earthTarget = new THREE.Vector3(EARTH_RADIUS * 2, 0, -EARTH_RADIUS);
+
+    for (let i = 1; i <= 30; i++) {
+      const t = i / 30;
+      const arcHeight = moonDist * 0.12 * Math.sin(t * Math.PI);
+      const pos = new THREE.Vector3().lerpVectors(
+        returnStart,
+        earthTarget,
+        t
+      );
+      // Arc on opposite side for return
+      pos.add(perpendicular.clone().multiplyScalar(-arcHeight));
+      pos.y -= Math.sin(t * Math.PI) * moonDist * 0.04;
+      points.push(pos);
     }
 
     this.trajectoryPoints = points;
@@ -239,6 +269,15 @@ export class MissionPreview {
     if (this.trajectoryLine) {
       this.trajectoryLine.visible = true;
     }
+
+    // Hide other UI elements
+    const titleCard = document.getElementById('title-card');
+    const journeyDock = document.getElementById('journey-dock');
+    const missionBtn = this.container.querySelector('.mission-start-btn') as HTMLElement;
+    if (titleCard) titleCard.style.opacity = '0';
+    if (journeyDock) journeyDock.style.opacity = '0';
+    if (missionBtn) missionBtn.style.opacity = '0';
+
     this.updatePhaseDisplay();
   }
 
@@ -248,6 +287,14 @@ export class MissionPreview {
     if (this.trajectoryLine) {
       this.trajectoryLine.visible = false;
     }
+
+    // Restore UI elements
+    const titleCard = document.getElementById('title-card');
+    const journeyDock = document.getElementById('journey-dock');
+    const missionBtn = this.container.querySelector('.mission-start-btn') as HTMLElement;
+    if (titleCard) titleCard.style.opacity = '1';
+    if (journeyDock) journeyDock.style.opacity = '1';
+    if (missionBtn) missionBtn.style.opacity = '1';
   }
 
   private updatePhaseDisplay(): void {
