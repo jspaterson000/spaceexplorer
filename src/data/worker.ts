@@ -42,7 +42,7 @@ self.onmessage = (event: MessageEvent<WorkerMessage>) => {
       try {
         const posVel = satellite.propagate(satRecs[i], date);
 
-        if (posVel.position && typeof posVel.position !== 'boolean') {
+        if (posVel && posVel.position && typeof posVel.position !== 'boolean') {
           const pos = posVel.position as satellite.EciVec3<number>;
           const vel = posVel.velocity as satellite.EciVec3<number>;
 
@@ -60,6 +60,6 @@ self.onmessage = (event: MessageEvent<WorkerMessage>) => {
     }
 
     const response: WorkerResponse = { type: 'positions', positions };
-    self.postMessage(response, [positions.buffer]);
+    self.postMessage(response, { transfer: [positions.buffer] });
   }
 };
