@@ -56,16 +56,20 @@ const CELESTRAK_BASE = '/api/celestrak/NORAD/elements/gp.php';
 
 export async function fetchTLEs(category: string): Promise<TLE[]> {
   const url = `${CELESTRAK_BASE}?GROUP=${category}&FORMAT=TLE`;
+  console.log(`[CelesTrak] Fetching ${category} from ${url}`);
 
   try {
     const response = await fetch(url);
+    console.log(`[CelesTrak] ${category} response: ${response.status}`);
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
     const text = await response.text();
-    return parseTLE(text);
+    const tles = parseTLE(text);
+    console.log(`[CelesTrak] ${category}: parsed ${tles.length} TLEs`);
+    return tles;
   } catch (error) {
-    console.error(`Failed to fetch ${category}:`, error);
+    console.error(`[CelesTrak] Failed to fetch ${category}:`, error);
     return [];
   }
 }

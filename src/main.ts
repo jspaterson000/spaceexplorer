@@ -59,32 +59,44 @@ infoCard.onClose(() => {
 // Load satellite data
 async function loadSatellites() {
   const hud = document.getElementById('hud')!;
+  console.log('[Satellites] Starting load...');
 
   // Try cache first
   let tles = await cache.getAll();
+  console.log(`[Satellites] Cache returned ${tles.length} TLEs`);
 
   if (tles.length > 0) {
     satellites.setTLEs(tles);
     const count = await worker.init(tles);
-    console.log(`Loaded ${count} satellites from cache`);
+    console.log(`[Satellites] Loaded ${count} satellites from cache`);
   }
 
   // Fetch fresh data if stale or empty
-  if (await cache.isStale(24 * 60 * 60 * 1000) || tles.length === 0) {
+  const isStale = await cache.isStale(24 * 60 * 60 * 1000);
+  console.log(`[Satellites] Cache stale: ${isStale}, tles.length: ${tles.length}`);
+
+  if (isStale || tles.length === 0) {
     try {
       hud.innerHTML = '<div style="color: var(--stardust);">Loading satellite data...</div>';
+      console.log('[Satellites] Fetching from CelesTrak...');
       tles = await fetchAllTLEs();
+      console.log(`[Satellites] Fetched ${tles.length} TLEs from CelesTrak`);
 
       if (tles.length > 0) {
         await cache.store(tles);
         satellites.setTLEs(tles);
+        console.log(`[Satellites] Set ${satellites.count} satellites on mesh`);
         const count = await worker.init(tles);
-        console.log(`Loaded ${count} satellites from CelesTrak`);
+        console.log(`[Satellites] Worker initialized with ${count} satellites`);
+      } else {
+        console.error('[Satellites] No TLEs returned from fetchAllTLEs!');
       }
     } catch (error) {
-      console.error('Failed to fetch TLEs:', error);
+      console.error('[Satellites] Failed to fetch TLEs:', error);
     }
   }
+
+  console.log(`[Satellites] Final count: ${satellites.count}`);
 }
 
 loadSatellites();
