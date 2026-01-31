@@ -9,6 +9,7 @@ import { Satellites } from './objects/Satellites';
 import { SatelliteWorker } from './data/SatelliteWorker';
 import { fetchAllTLEs } from './data/celestrak';
 import { TLECache } from './data/cache';
+import { InfoCard } from './ui/InfoCard';
 
 const canvas = document.getElementById('canvas') as HTMLCanvasElement;
 const renderer = new Renderer({ canvas });
@@ -33,10 +34,27 @@ satellites.addToScene(scene);
 const worker = new SatelliteWorker();
 worker.onPositions((positions) => {
   satellites.updatePositions(positions);
+  latestPositions = positions;
 });
 
 // Cache
 const cache = new TLECache();
+
+// InfoCard
+const infoCardContainer = document.getElementById('info-card')!;
+const infoCard = new InfoCard(infoCardContainer);
+
+// Raycaster for satellite selection
+const raycaster = new THREE.Raycaster();
+raycaster.params.Points = { threshold: 100000 }; // 100km threshold
+const mouse = new THREE.Vector2();
+let selectedIndex: number | null = null;
+let latestPositions: Float32Array | null = null;
+
+// Clear selection when card is closed
+infoCard.onClose(() => {
+  selectedIndex = null;
+});
 
 // Load satellite data
 async function loadSatellites() {
@@ -74,6 +92,8 @@ loadSatellites();
 // Input handling
 let isDragging = false;
 let lastMouse = { x: 0, y: 0 };
+let mouseDownPos = { x: 0, y: 0 };
+const CLICK_THRESHOLD = 5; // pixels
 
 canvas.addEventListener('wheel', (e) => {
   e.preventDefault();
@@ -86,6 +106,7 @@ canvas.addEventListener('wheel', (e) => {
 canvas.addEventListener('mousedown', (e) => {
   isDragging = true;
   lastMouse = { x: e.clientX, y: e.clientY };
+  mouseDownPos = { x: e.clientX, y: e.clientY };
 });
 
 canvas.addEventListener('mousemove', (e) => {
@@ -96,8 +117,68 @@ canvas.addEventListener('mousemove', (e) => {
   lastMouse = { x: e.clientX, y: e.clientY };
 });
 
-canvas.addEventListener('mouseup', () => { isDragging = false; });
+canvas.addEventListener('mouseup', (e) => {
+  const dx = e.clientX - mouseDownPos.x;
+  const dy = e.clientY - mouseDownPos.y;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+
+  // Only treat as click if mouse didn't move much
+  if (distance < CLICK_THRESHOLD) {
+    handleSatelliteClick(e);
+  }
+
+  isDragging = false;
+});
+
 canvas.addEventListener('mouseleave', () => { isDragging = false; });
+
+// Handle satellite selection via raycasting
+function handleSatelliteClick(event: MouseEvent) {
+  // Convert mouse position to normalized device coordinates (-1 to +1)
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, orbitCamera.camera);
+
+  const intersects = raycaster.intersectObject(satellites.mesh);
+
+  if (intersects.length > 0) {
+    const instanceId = intersects[0].instanceId;
+
+    if (instanceId !== undefined) {
+      const tle = satellites.getTLEAtIndex(instanceId);
+
+      if (tle && latestPositions) {
+        selectedIndex = instanceId;
+
+        // Get position and velocity from latest positions
+        const x = latestPositions[instanceId * 6 + 0];
+        const y = latestPositions[instanceId * 6 + 1];
+        const z = latestPositions[instanceId * 6 + 2];
+        const vx = latestPositions[instanceId * 6 + 3];
+        const vy = latestPositions[instanceId * 6 + 4];
+        const vz = latestPositions[instanceId * 6 + 5];
+
+        // Calculate altitude (distance from center minus Earth radius)
+        const EARTH_RADIUS = 6_371_000; // meters
+        const distanceFromCenter = Math.sqrt(x * x + y * y + z * z);
+        const altitude = distanceFromCenter - EARTH_RADIUS;
+
+        // Calculate velocity magnitude
+        const velocity = Math.sqrt(vx * vx + vy * vy + vz * vz);
+
+        infoCard.show({
+          tle,
+          altitude,
+          velocity,
+        });
+      }
+    }
+  } else {
+    // Clicked on empty space - hide card
+    infoCard.hide();
+  }
+}
 
 // HUD
 const hud = document.getElementById('hud')!;
