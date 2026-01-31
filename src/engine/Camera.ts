@@ -49,12 +49,12 @@ export class Camera {
     this._logDistance = initialZoom;
     this.targetLogDistance = initialZoom;
 
-    // Start looking at Earth from above equator
+    // Start looking at Earth from near equator level
     // Three.js Spherical.set(radius, phi, theta) where phi=polar, theta=azimuthal
     this.spherical.set(
       LogScale.logDistanceToMeters(initialZoom),
-      Math.PI / 3, // phi (polar angle from top)
-      0            // theta (azimuth)
+      Math.PI / 2.2, // phi - slightly above equator for cinematic view
+      0              // theta (azimuth)
     );
     this.targetSpherical.copy(this.spherical);
 
