@@ -113,7 +113,8 @@ canvas.addEventListener('mousemove', (e) => {
   if (!isDragging) return;
   const deltaX = e.clientX - lastMouse.x;
   const deltaY = e.clientY - lastMouse.y;
-  orbitCamera.rotate(deltaY * 0.005, -deltaX * 0.005);
+  // deltaX controls horizontal rotation (phi), deltaY controls vertical tilt (theta)
+  orbitCamera.rotate(-deltaY * 0.005, deltaX * 0.005);
   lastMouse = { x: e.clientX, y: e.clientY };
 });
 
