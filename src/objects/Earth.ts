@@ -171,22 +171,23 @@ export class Earth {
     }
   }
 
-  update(time: number): void {
-    // Rotate Earth (one rotation per 24 hours, sped up for demo)
-    // Use modulo to prevent floating point precision issues with large time values
-    const rotationPeriod = 2 * Math.PI / 0.00001; // Period before wrap
-    const wrappedTime = time % rotationPeriod;
-    this.mesh.rotation.y = wrappedTime * 0.00001;
-    this.atmosphere.rotation.y = this.mesh.rotation.y;
+  update(_time: number): void {
+    // Sun direction is fixed - based on current UTC time
+    // This gives realistic day/night based on actual time of day
+    const now = new Date();
+    const hours = now.getUTCHours() + now.getUTCMinutes() / 60;
+    // Sun is overhead at noon UTC (12:00) at longitude 0
+    // Convert to angle: 12:00 = sun at +X, 0:00 = sun at -X
+    const sunAngle = ((hours - 12) / 24) * Math.PI * 2;
 
-    // Update sun direction based on time (wrap sun angle to avoid precision issues)
-    const sunPeriod = 2 * Math.PI / 0.0001;
-    const sunAngle = (time % sunPeriod) * 0.0001;
     this.material.uniforms.sunDirection.value.set(
       Math.cos(sunAngle),
-      0.2,
+      0.3,  // Slight tilt for seasonal variation
       Math.sin(sunAngle)
     ).normalize();
+
+    // Earth doesn't visibly rotate (satellites are in Earth-fixed frame)
+    // The day/night terminator moves as real time passes
   }
 
   addToScene(scene: THREE.Scene): void {
