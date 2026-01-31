@@ -1,8 +1,9 @@
 // src/objects/Moon.ts
 import * as THREE from 'three';
 
-const MOON_RADIUS = 1_737_000; // meters
-const MOON_DISTANCE = 384_400_000; // meters (average)
+const MOON_RADIUS_REAL = 1_737_000; // meters (actual)
+const MOON_RADIUS = MOON_RADIUS_REAL * 3; // Scaled up 3x for visibility
+const MOON_DISTANCE = 384_400_000; // meters (average, kept accurate)
 const LUNAR_MONTH = 27.321661 * 24 * 60 * 60 * 1000; // ms
 
 export class Moon {
