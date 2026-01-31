@@ -15,6 +15,9 @@ export class Earth {
   private material: THREE.ShaderMaterial;
 
   private static vertexShader = `
+    #include <common>
+    #include <logdepthbuf_pars_vertex>
+
     varying vec2 vUv;
     varying vec3 vNormal;
     varying vec3 vPosition;
@@ -24,10 +27,15 @@ export class Earth {
       vNormal = normalize(normalMatrix * normal);
       vPosition = (modelMatrix * vec4(position, 1.0)).xyz;
       gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+
+      #include <logdepthbuf_vertex>
     }
   `;
 
   private static fragmentShader = `
+    #include <common>
+    #include <logdepthbuf_pars_fragment>
+
     uniform sampler2D dayMap;
     uniform sampler2D nightMap;
     uniform sampler2D cloudsMap;
@@ -42,6 +50,8 @@ export class Earth {
     varying vec3 vPosition;
 
     void main() {
+      #include <logdepthbuf_fragment>
+
       vec3 normal = normalize(vNormal);
       float sunDot = dot(normal, sunDirection);
       float dayFactor = smoothstep(-0.1, 0.2, sunDot);
@@ -61,6 +71,9 @@ export class Earth {
   `;
 
   private static atmosphereVertexShader = `
+    #include <common>
+    #include <logdepthbuf_pars_vertex>
+
     varying vec3 vNormal;
     varying vec3 vPosition;
 
@@ -68,14 +81,21 @@ export class Earth {
       vNormal = normalize(normalMatrix * normal);
       vPosition = (modelViewMatrix * vec4(position, 1.0)).xyz;
       gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+
+      #include <logdepthbuf_vertex>
     }
   `;
 
   private static atmosphereFragmentShader = `
+    #include <common>
+    #include <logdepthbuf_pars_fragment>
+
     varying vec3 vNormal;
     varying vec3 vPosition;
 
     void main() {
+      #include <logdepthbuf_fragment>
+
       vec3 viewDir = normalize(-vPosition);
       float fresnel = 1.0 - dot(viewDir, vNormal);
       fresnel = pow(fresnel, 3.0);

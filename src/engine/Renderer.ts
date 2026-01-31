@@ -22,6 +22,7 @@ export class Renderer {
       canvas: config.canvas,
       antialias: config.antialias ?? true,
       alpha: false,
+      logarithmicDepthBuffer: true, // Better precision at astronomical scales
     });
 
     this._capabilities = {

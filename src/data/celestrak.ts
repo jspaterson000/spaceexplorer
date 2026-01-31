@@ -49,7 +49,10 @@ export function categorizeSatellite(name: string): SatelliteCategory {
   return 'other';
 }
 
-const CELESTRAK_BASE = 'https://celestrak.org/NORAD/elements/gp.php';
+// Use proxy in development to avoid CORS, direct URL in production
+const CELESTRAK_BASE = import.meta.env.DEV
+  ? '/api/celestrak/NORAD/elements/gp.php'
+  : 'https://celestrak.org/NORAD/elements/gp.php';
 
 export async function fetchTLEs(category: string): Promise<TLE[]> {
   const url = `${CELESTRAK_BASE}?GROUP=${category}&FORMAT=TLE`;
