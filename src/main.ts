@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { Renderer } from './engine/Renderer';
 import { Camera } from './engine/Camera';
 import { LogScale } from './engine/LogScale';
+import { Earth } from './objects/Earth';
 
 const canvas = document.getElementById('canvas') as HTMLCanvasElement;
 const renderer = new Renderer({ canvas });
@@ -12,11 +13,13 @@ const orbitCamera = new Camera();
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x05060a);
 
-// Earth placeholder
-const geometry = new THREE.SphereGeometry(6_371_000, 64, 64);
-const material = new THREE.MeshBasicMaterial({ color: 0x58a6ff, wireframe: true });
-const earth = new THREE.Mesh(geometry, material);
-scene.add(earth);
+// Add ambient light
+const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+scene.add(ambientLight);
+
+// Earth
+const earth = new Earth();
+earth.addToScene(scene);
 
 // Input handling
 let isDragging = false;
@@ -51,15 +54,19 @@ function updateHUD() {
   hud.innerHTML = `
     <div style="color: var(--stardust); font-size: 14px;">
       <div>Altitude: ${LogScale.formatDistance(Math.max(0, altitude))}</div>
-      <div style="opacity: 0.6; font-size: 12px;">Scroll to zoom • Drag to rotate</div>
+      <div style="opacity: 0.6; font-size: 12px; margin-top: 4px;">Scroll to zoom • Drag to rotate</div>
     </div>
   `;
 }
 
+let startTime = performance.now();
+
 function animate() {
   requestAnimationFrame(animate);
+  const time = performance.now() - startTime;
+
   orbitCamera.update();
-  earth.rotation.y += 0.0005;
+  earth.update(time);
   renderer.render(scene, orbitCamera.camera);
   updateHUD();
 }
