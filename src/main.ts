@@ -46,7 +46,7 @@ const infoCard = new InfoCard(infoCardContainer);
 
 // Raycaster for satellite selection
 const raycaster = new THREE.Raycaster();
-raycaster.params.Points = { threshold: 100000 }; // 100km threshold
+raycaster.params.Points = { threshold: 200000 }; // 200km threshold for point picking
 const mouse = new THREE.Vector2();
 let selectedIndex: number | null = null;
 let latestPositions: Float32Array | null = null;
@@ -157,21 +157,22 @@ function handleSatelliteClick(event: MouseEvent) {
   const intersects = raycaster.intersectObject(satellites.mesh);
 
   if (intersects.length > 0) {
-    const instanceId = intersects[0].instanceId;
+    // For Points, we get 'index' instead of 'instanceId'
+    const pointIndex = intersects[0].index;
 
-    if (instanceId !== undefined) {
-      const tle = satellites.getTLEAtIndex(instanceId);
+    if (pointIndex !== undefined) {
+      const tle = satellites.getTLEAtIndex(pointIndex);
 
       if (tle && latestPositions) {
-        selectedIndex = instanceId;
+        selectedIndex = pointIndex;
 
         // Get position and velocity from latest positions
-        const x = latestPositions[instanceId * 6 + 0];
-        const y = latestPositions[instanceId * 6 + 1];
-        const z = latestPositions[instanceId * 6 + 2];
-        const vx = latestPositions[instanceId * 6 + 3];
-        const vy = latestPositions[instanceId * 6 + 4];
-        const vz = latestPositions[instanceId * 6 + 5];
+        const x = latestPositions[pointIndex * 6 + 0];
+        const y = latestPositions[pointIndex * 6 + 1];
+        const z = latestPositions[pointIndex * 6 + 2];
+        const vx = latestPositions[pointIndex * 6 + 3];
+        const vy = latestPositions[pointIndex * 6 + 4];
+        const vz = latestPositions[pointIndex * 6 + 5];
 
         // Calculate altitude (distance from center minus Earth radius)
         const EARTH_RADIUS = 6_371_000; // meters
