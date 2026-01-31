@@ -11,6 +11,7 @@ import { SatelliteWorker } from './data/SatelliteWorker';
 import { fetchAllTLEs } from './data/celestrak';
 import { TLECache } from './data/cache';
 import { InfoCard } from './ui/InfoCard';
+import { Navigation } from './ui/Navigation';
 
 const canvas = document.getElementById('canvas') as HTMLCanvasElement;
 const renderer = new Renderer({ canvas });
@@ -30,6 +31,10 @@ earth.addToScene(scene);
 // Moon
 const moon = new Moon();
 moon.addToScene(scene);
+
+// Navigation
+const navigation = new Navigation(orbitCamera);
+navigation.setMoonMesh(moon.mesh);
 
 // Satellites
 const satellites = new Satellites(renderer.capabilities.maxSatellites);
@@ -151,11 +156,25 @@ canvas.addEventListener('mouseleave', () => { isDragging = false; });
 
 // Handle satellite selection via raycasting
 function handleSatelliteClick(event: MouseEvent) {
+  // Don't handle clicks while navigating
+  if (navigation.isNavigating()) return;
+
   // Convert mouse position to normalized device coordinates (-1 to +1)
   mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
   mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
   raycaster.setFromCamera(mouse, orbitCamera.camera);
+
+  // Check for celestial body clicks first
+  const bodyClicked = navigation.checkBodyClick(raycaster, {
+    earth: earth.mesh,
+    moon: moon.mesh,
+  });
+
+  if (bodyClicked) {
+    navigation.flyTo(bodyClicked);
+    return;
+  }
 
   const intersects = raycaster.intersectObject(satellites.mesh);
 
@@ -216,6 +235,7 @@ function animate() {
   const now = Date.now();
 
   orbitCamera.update();
+  navigation.update();
   earth.update(time);
 
   // Sync Moon with Earth's sun direction and update orbital position

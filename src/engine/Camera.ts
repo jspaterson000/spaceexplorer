@@ -19,6 +19,8 @@ export class Camera {
   private targetLogDistance: number;
   private spherical = new THREE.Spherical();
   private targetSpherical = new THREE.Spherical();
+  private targetCenter = new THREE.Vector3(0, 0, 0);
+  private currentCenter = new THREE.Vector3(0, 0, 0);
 
   private readonly minZoom: number;
   private readonly maxZoom: number;
@@ -81,12 +83,28 @@ export class Camera {
     );
   }
 
+  setTarget(x: number, y: number, z: number): void {
+    this.targetCenter.set(x, y, z);
+  }
+
+  setZoom(logDistance: number): void {
+    this._logDistance = logDistance;
+    this.targetLogDistance = logDistance;
+  }
+
+  getTarget(): THREE.Vector3 {
+    return this.currentCenter.clone();
+  }
+
   update(): void {
     // Smooth interpolation
     this._logDistance += (this.targetLogDistance - this._logDistance) * this.damping;
     this.spherical.theta += (this.targetSpherical.theta - this.spherical.theta) * this.damping;
     this.spherical.phi += (this.targetSpherical.phi - this.spherical.phi) * this.damping;
     this.spherical.radius = LogScale.logDistanceToMeters(this._logDistance);
+
+    // Smoothly move center
+    this.currentCenter.lerp(this.targetCenter, this.damping);
 
     this.updateCameraPosition();
   }
@@ -97,8 +115,8 @@ export class Camera {
   }
 
   private updateCameraPosition(): void {
-    const position = new THREE.Vector3().setFromSpherical(this.spherical);
-    this.camera.position.copy(position);
-    this.camera.lookAt(0, 0, 0);
+    const offset = new THREE.Vector3().setFromSpherical(this.spherical);
+    this.camera.position.copy(this.currentCenter).add(offset);
+    this.camera.lookAt(this.currentCenter);
   }
 }
