@@ -44,10 +44,11 @@ export class Camera {
     this.targetLogDistance = initialZoom;
 
     // Start looking at Earth from above equator
+    // Three.js Spherical.set(radius, phi, theta) where phi=polar, theta=azimuthal
     this.spherical.set(
       LogScale.logDistanceToMeters(initialZoom),
-      Math.PI / 3, // theta (polar angle from top)
-      0            // phi (azimuth)
+      Math.PI / 3, // phi (polar angle from top)
+      0            // theta (azimuth)
     );
     this.targetSpherical.copy(this.spherical);
 
@@ -70,12 +71,14 @@ export class Camera {
     );
   }
 
-  rotate(deltaTheta: number, deltaPhi: number): void {
-    this.targetSpherical.theta = Math.max(
+  rotate(deltaAzimuth: number, deltaPolar: number): void {
+    // theta = azimuthal angle (horizontal rotation around Y axis)
+    this.targetSpherical.theta += deltaAzimuth;
+    // phi = polar angle (vertical tilt, clamped to avoid gimbal lock)
+    this.targetSpherical.phi = Math.max(
       0.1,
-      Math.min(Math.PI - 0.1, this.targetSpherical.theta + deltaTheta)
+      Math.min(Math.PI - 0.1, this.targetSpherical.phi + deltaPolar)
     );
-    this.targetSpherical.phi += deltaPhi;
   }
 
   update(): void {
