@@ -10,6 +10,7 @@ export interface CameraConfig {
   maxZoom?: number;
   initialZoom?: number;
   damping?: number;
+  autoRotateSpeed?: number;
 }
 
 export class Camera {
@@ -25,6 +26,7 @@ export class Camera {
   private readonly minZoom: number;
   private readonly maxZoom: number;
   private readonly damping: number;
+  private readonly autoRotateSpeed: number;
 
   constructor(config: CameraConfig = {}) {
     const {
@@ -35,12 +37,14 @@ export class Camera {
       maxZoom = 9,   // ~1M km - edge of Phase 1
       initialZoom = 7.5, // ~30,000 km
       damping = 0.08, // Smoother interpolation
+      autoRotateSpeed = 0.0003, // Subtle cinematic drift
     } = config;
 
     this.camera = new THREE.PerspectiveCamera(fov, 1, near, far);
     this.minZoom = minZoom;
     this.maxZoom = maxZoom;
     this.damping = damping;
+    this.autoRotateSpeed = autoRotateSpeed;
 
     this._logDistance = initialZoom;
     this.targetLogDistance = initialZoom;
@@ -102,6 +106,10 @@ export class Camera {
   }
 
   update(): void {
+    // Cinematic auto-rotation
+    this.targetSpherical.theta += this.autoRotateSpeed;
+    this.spherical.theta += this.autoRotateSpeed;
+
     // Smooth interpolation
     this._logDistance += (this.targetLogDistance - this._logDistance) * this.damping;
     this.spherical.theta += (this.targetSpherical.theta - this.spherical.theta) * this.damping;
