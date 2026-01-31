@@ -23,7 +23,7 @@ const BODIES: Record<CelestialBody, BodyConfig> = {
     name: 'Moon',
     position: () => new THREE.Vector3(0, 0, 0), // Will be updated dynamically
     radius: 1_737_000 * 3, // Visual radius (scaled)
-    defaultZoom: 6.8,
+    defaultZoom: 7.3, // Further out to see the whole Moon
   },
 };
 
@@ -77,27 +77,14 @@ export class Navigation {
   }
 
   private renderDock(): void {
-    const earthDistance = this.currentBody === 'earth'
-      ? ''
-      : this.formatDistance(BODIES.earth.position());
-
-    const moonDistance = this.currentBody === 'moon'
-      ? ''
-      : this.moonMesh
-        ? this.formatDistance(BODIES.moon.position())
-        : '384,400 km';
-
     this.dockElement.innerHTML = `
       <div class="dock-item ${this.currentBody === 'earth' ? 'active' : ''}" data-body="earth">
         <span class="dock-indicator"></span>
         <span class="dock-name">Earth</span>
-        ${earthDistance ? `<span class="dock-distance">${earthDistance}</span>` : ''}
       </div>
-      <div class="dock-divider"></div>
       <div class="dock-item ${this.currentBody === 'moon' ? 'active' : ''}" data-body="moon">
         <span class="dock-indicator"></span>
         <span class="dock-name">Moon</span>
-        ${moonDistance ? `<span class="dock-distance">${moonDistance}</span>` : ''}
       </div>
     `;
   }
