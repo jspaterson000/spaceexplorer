@@ -160,77 +160,37 @@ export class MissionPreview {
   private updateTrajectoryPoints(): void {
     const moonPos = this.moonPosition();
     const moonDist = moonPos.length();
-    const moonDir = moonPos.clone().normalize();
 
-    // Create perpendicular vectors for the trajectory plane
-    const up = new THREE.Vector3(0, 1, 0);
-    const perpendicular = new THREE.Vector3().crossVectors(moonDir, up).normalize();
-
+    // Simple, clean free-return trajectory
+    // All in the XZ plane for clarity, with Moon along X axis direction
     const points: THREE.Vector3[] = [];
+
+    // Normalize moon direction
+    const toMoon = moonPos.clone().normalize();
+    // Perpendicular in XZ plane
+    const perp = new THREE.Vector3(-toMoon.z, 0, toMoon.x).normalize();
+
     const EARTH_RADIUS = 6_371_000;
-    const MOON_FLYBY_ALTITUDE = 10_000_000; // Close flyby distance
+    const MOON_RADIUS = 1_737_000 * 3; // Visual radius
+    const FLYBY_DIST = MOON_RADIUS * 3; // Safe distance around Moon
 
-    // Phase 1: Earth parking orbit (small circle near Earth)
-    const parkingOrbitRadius = EARTH_RADIUS * 1.5;
-    for (let i = 0; i <= 8; i++) {
-      const angle = (i / 8) * Math.PI * 0.4 - Math.PI * 0.2;
-      const x = Math.cos(angle) * parkingOrbitRadius;
-      const z = Math.sin(angle) * parkingOrbitRadius;
-      points.push(new THREE.Vector3(x, 0, z));
-    }
+    // Control points for a smooth Bezier-like trajectory
+    const p0 = new THREE.Vector3(0, 0, 0); // Earth
+    const p1 = perp.clone().multiplyScalar(moonDist * 0.3); // Outbound curve control
+    const p2 = moonPos.clone().add(perp.clone().multiplyScalar(moonDist * 0.2)); // Approach Moon
+    const p3 = moonPos.clone().add(toMoon.clone().multiplyScalar(FLYBY_DIST)); // Far side of Moon
+    const p4 = moonPos.clone().add(perp.clone().multiplyScalar(-moonDist * 0.2)); // Departing Moon
+    const p5 = perp.clone().multiplyScalar(-moonDist * 0.25); // Return curve control
+    const p6 = new THREE.Vector3(0, 0, 0); // Back to Earth
 
-    // Phase 2: Outbound trajectory - curve out toward Moon
-    const startPoint = points[points.length - 1].clone();
-    for (let i = 1; i <= 30; i++) {
-      const t = i / 30;
-      // Bezier curve from Earth to Moon with outward arc
-      const arcHeight = moonDist * 0.15 * Math.sin(t * Math.PI);
-      const pos = new THREE.Vector3().lerpVectors(
-        startPoint,
-        moonPos,
-        t
-      );
-      // Add arc perpendicular to the Earth-Moon line
-      pos.add(perpendicular.clone().multiplyScalar(arcHeight));
-      pos.y += Math.sin(t * Math.PI) * moonDist * 0.05;
-      points.push(pos);
-    }
+    // Generate smooth curve through these points
+    const controlPoints = [p0, p1, p2, p3, p4, p5, p6];
+    const curve = new THREE.CatmullRomCurve3(controlPoints, false, 'catmullrom', 0.5);
 
-    // Phase 3: Lunar flyby - swing around the far side
-    const flybyRadius = MOON_FLYBY_ALTITUDE;
-    const flybyCenter = moonPos.clone();
-    // Calculate the approach direction
-    const approachDir = points[points.length - 1].clone().sub(moonPos).normalize();
-
-    for (let i = 0; i <= 20; i++) {
-      const angle = Math.PI * 0.3 + (i / 20) * Math.PI * 1.4; // Swing around ~250 degrees
-      // Rotate around Moon in the plane defined by approach
-      const localX = Math.cos(angle) * flybyRadius;
-      const localZ = Math.sin(angle) * flybyRadius;
-
-      const pos = moonPos.clone();
-      pos.add(moonDir.clone().multiplyScalar(localZ));
-      pos.add(perpendicular.clone().multiplyScalar(localX));
-      pos.y += Math.sin((i / 20) * Math.PI) * flybyRadius * 0.3;
-      points.push(pos);
-    }
-
-    // Phase 4: Return trajectory - curve back to Earth
-    const returnStart = points[points.length - 1].clone();
-    const earthTarget = new THREE.Vector3(EARTH_RADIUS * 2, 0, -EARTH_RADIUS);
-
-    for (let i = 1; i <= 30; i++) {
-      const t = i / 30;
-      const arcHeight = moonDist * 0.12 * Math.sin(t * Math.PI);
-      const pos = new THREE.Vector3().lerpVectors(
-        returnStart,
-        earthTarget,
-        t
-      );
-      // Arc on opposite side for return
-      pos.add(perpendicular.clone().multiplyScalar(-arcHeight));
-      pos.y -= Math.sin(t * Math.PI) * moonDist * 0.04;
-      points.push(pos);
+    // Sample the curve
+    for (let i = 0; i <= 100; i++) {
+      const t = i / 100;
+      points.push(curve.getPoint(t));
     }
 
     this.trajectoryPoints = points;
@@ -240,14 +200,11 @@ export class MissionPreview {
       this.scene.remove(this.trajectoryLine);
     }
 
-    const curve = new THREE.CatmullRomCurve3(points);
-    const curvePoints = curve.getPoints(200);
-    const geometry = new THREE.BufferGeometry().setFromPoints(curvePoints);
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
     const material = new THREE.LineBasicMaterial({
       color: 0x58a6ff,
       transparent: true,
-      opacity: 0.6,
-      linewidth: 2,
+      opacity: 0.7,
     });
     this.trajectoryLine = new THREE.Line(geometry, material);
     this.trajectoryLine.visible = false;
