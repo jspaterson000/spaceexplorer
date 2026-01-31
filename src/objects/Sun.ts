@@ -1,10 +1,12 @@
 // src/objects/Sun.ts
 import * as THREE from 'three';
+import { Lensflare, LensflareElement } from 'three/addons/objects/Lensflare.js';
 
 export class Sun {
   readonly mesh: THREE.Group;
   private core: THREE.Mesh;
   private glow: THREE.Mesh;
+  private lensflare: Lensflare;
 
   // Compressed distance for navigation (real: 150M km, using 30M km)
   private static readonly DISTANCE = 30_000_000_000; // 30 million km in meters
@@ -82,8 +84,95 @@ export class Sun {
     this.glow = new THREE.Mesh(coronaGeometry, coronaMaterial);
     this.mesh.add(this.glow);
 
+    // Create lens flare
+    this.lensflare = new Lensflare();
+
+    // Generate flare textures procedurally
+    const flareTexture = this.createFlareTexture(256, 0.0);
+    const flareRingTexture = this.createFlareTexture(256, 0.6);
+    const flareHexTexture = this.createHexagonTexture(128);
+
+    // Main sun flare - large and bright
+    this.lensflare.addElement(new LensflareElement(flareTexture, 700, 0, new THREE.Color(0xffffff)));
+    this.lensflare.addElement(new LensflareElement(flareTexture, 300, 0, new THREE.Color(0xffcc66)));
+
+    // Secondary flares along the line
+    this.lensflare.addElement(new LensflareElement(flareRingTexture, 60, 0.6, new THREE.Color(0xff9933)));
+    this.lensflare.addElement(new LensflareElement(flareHexTexture, 80, 0.7, new THREE.Color(0xff6600)));
+    this.lensflare.addElement(new LensflareElement(flareRingTexture, 120, 0.9, new THREE.Color(0xffaa44)));
+    this.lensflare.addElement(new LensflareElement(flareHexTexture, 50, 1.0, new THREE.Color(0xff8833)));
+
+    this.mesh.add(this.lensflare);
+
     // Position the sun (simplified - along +X axis)
     this.mesh.position.set(Sun.DISTANCE, 0, 0);
+  }
+
+  // Create a radial gradient flare texture
+  private createFlareTexture(size: number, holeSize: number): THREE.Texture {
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d')!;
+
+    const gradient = ctx.createRadialGradient(
+      size / 2, size / 2, size * holeSize * 0.5,
+      size / 2, size / 2, size * 0.5
+    );
+
+    if (holeSize > 0) {
+      gradient.addColorStop(0, 'rgba(255, 255, 255, 0)');
+      gradient.addColorStop(0.2, 'rgba(255, 200, 150, 0.3)');
+      gradient.addColorStop(0.5, 'rgba(255, 150, 100, 0.1)');
+      gradient.addColorStop(1, 'rgba(255, 100, 50, 0)');
+    } else {
+      gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+      gradient.addColorStop(0.2, 'rgba(255, 220, 180, 0.8)');
+      gradient.addColorStop(0.4, 'rgba(255, 180, 100, 0.4)');
+      gradient.addColorStop(0.6, 'rgba(255, 120, 50, 0.2)');
+      gradient.addColorStop(1, 'rgba(255, 80, 20, 0)');
+    }
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, size, size);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+    return texture;
+  }
+
+  // Create a hexagonal flare texture
+  private createHexagonTexture(size: number): THREE.Texture {
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d')!;
+
+    const cx = size / 2;
+    const cy = size / 2;
+    const radius = size * 0.4;
+
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const angle = (i * Math.PI) / 3 - Math.PI / 6;
+      const x = cx + radius * Math.cos(angle);
+      const y = cy + radius * Math.sin(angle);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+
+    const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+    gradient.addColorStop(0, 'rgba(255, 200, 150, 0.4)');
+    gradient.addColorStop(0.5, 'rgba(255, 150, 100, 0.2)');
+    gradient.addColorStop(1, 'rgba(255, 100, 50, 0)');
+
+    ctx.fillStyle = gradient;
+    ctx.fill();
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+    return texture;
   }
 
   get position(): THREE.Vector3 {
