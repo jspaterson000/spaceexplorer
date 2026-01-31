@@ -35,8 +35,8 @@ export class Navigation {
   private flyProgress = 0;
   private flyDuration = 3500; // ms - longer for elegance
   private flyStartTime = 0;
-  private flyStartPos = new THREE.Vector3();
-  private flyEndPos = new THREE.Vector3();
+  private flyStartTarget = new THREE.Vector3();
+  private flyEndTarget = new THREE.Vector3();
   private flyStartZoom = 0;
   private flyEndZoom = 0;
   private flyMidZoom = 0; // Peak zoom out
@@ -104,13 +104,13 @@ export class Navigation {
     this.flyProgress = 0;
     this.flyStartTime = performance.now();
 
-    // Current camera state
-    this.flyStartPos.copy(this.camera.camera.position);
+    // Current state - save the body position we're orbiting
+    this.flyStartTarget.copy(BODIES[this.currentBody].position());
     this.flyStartZoom = this.camera.logDistance;
 
     // Target state
     const targetConfig = BODIES[body];
-    this.flyEndPos.copy(targetConfig.position());
+    this.flyEndTarget.copy(targetConfig.position());
     this.flyEndZoom = targetConfig.defaultZoom;
 
     // Calculate elegant arc - zoom out to see both bodies
@@ -147,10 +147,10 @@ export class Navigation {
       currentZoom = this.flyMidZoom + (this.flyEndZoom - this.flyMidZoom) * halfT;
     }
 
-    // Smoothly interpolate target position
-    const targetX = this.flyEndPos.x * t;
-    const targetY = this.flyEndPos.y * t;
-    const targetZ = this.flyEndPos.z * t;
+    // Smoothly interpolate target position from start body to end body
+    const targetX = this.flyStartTarget.x + (this.flyEndTarget.x - this.flyStartTarget.x) * t;
+    const targetY = this.flyStartTarget.y + (this.flyEndTarget.y - this.flyStartTarget.y) * t;
+    const targetZ = this.flyStartTarget.z + (this.flyEndTarget.z - this.flyStartTarget.z) * t;
 
     this.camera.setTarget(targetX, targetY, targetZ);
     this.camera.setZoom(currentZoom);
