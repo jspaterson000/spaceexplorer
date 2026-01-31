@@ -87,6 +87,11 @@ export class Camera {
     this.targetCenter.set(x, y, z);
   }
 
+  setTargetImmediate(x: number, y: number, z: number): void {
+    this.targetCenter.set(x, y, z);
+    this.currentCenter.set(x, y, z);
+  }
+
   setZoom(logDistance: number): void {
     this._logDistance = logDistance;
     this.targetLogDistance = logDistance;

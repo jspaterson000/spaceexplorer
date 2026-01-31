@@ -152,7 +152,7 @@ export class Navigation {
     const targetY = this.flyStartTarget.y + (this.flyEndTarget.y - this.flyStartTarget.y) * t;
     const targetZ = this.flyStartTarget.z + (this.flyEndTarget.z - this.flyStartTarget.z) * t;
 
-    this.camera.setTarget(targetX, targetY, targetZ);
+    this.camera.setTargetImmediate(targetX, targetY, targetZ);
     this.camera.setZoom(currentZoom);
 
     // Update title at midpoint with fade
