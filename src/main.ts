@@ -13,6 +13,7 @@ import { fetchAllTLEs } from './data/celestrak';
 import { TLECache } from './data/cache';
 import { InfoCard } from './ui/InfoCard';
 import { Navigation } from './ui/Navigation';
+import { MissionPreview } from './ui/MissionPreview';
 
 const canvas = document.getElementById('canvas') as HTMLCanvasElement;
 const renderer = new Renderer({ canvas });
@@ -45,6 +46,9 @@ navigation.setOnBodyChange((body) => {
   // Hide satellites when not viewing Earth (they're Earth satellites)
   satellites.mesh.visible = body === 'earth';
 });
+
+// Mission Preview
+const missionPreview = new MissionPreview(orbitCamera, scene, () => moon.mesh.position.clone());
 
 // Satellites
 const satellites = new Satellites(renderer.capabilities.maxSatellites);
@@ -247,6 +251,7 @@ function animate() {
 
   orbitCamera.update();
   navigation.update();
+  missionPreview.update();
   earth.update(time);
 
   // Sync Moon with Earth's sun direction and update orbital position

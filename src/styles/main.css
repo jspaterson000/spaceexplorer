@@ -321,3 +321,230 @@ html, body {
   background: var(--nebula);
   border-color: var(--ice);
 }
+
+/* Mission Preview */
+#mission-preview {
+  position: fixed;
+  top: 40px;
+  right: 40px;
+  z-index: 15;
+  opacity: 0;
+  transform: translateY(-10px);
+  animation: fadeSlideIn 0.8s ease-out 2s forwards;
+}
+
+.mission-start-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  background: rgba(13, 17, 23, 0.8);
+  border: 1px solid var(--nebula);
+  border-radius: 8px;
+  color: var(--starlight);
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.3s ease;
+}
+
+.mission-start-btn:hover {
+  background: rgba(28, 31, 38, 0.9);
+  border-color: var(--ice);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(88, 166, 255, 0.2);
+}
+
+.mission-icon {
+  font-size: 18px;
+  color: var(--ice);
+}
+
+.mission-label {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 14px;
+  letter-spacing: 0.05em;
+}
+
+/* Mission Overlay */
+#mission-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 60px;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+}
+
+#mission-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#mission-overlay > * {
+  pointer-events: auto;
+}
+
+.mission-header {
+  opacity: 0;
+  transform: translateY(-20px);
+  animation: missionFadeIn 1s ease-out 0.3s forwards;
+}
+
+@keyframes missionFadeIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.mission-badge {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--ice);
+  background: rgba(88, 166, 255, 0.1);
+  border: 1px solid rgba(88, 166, 255, 0.3);
+  padding: 6px 14px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.mission-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 72px;
+  font-weight: 400;
+  color: var(--starlight);
+  letter-spacing: 0.02em;
+  margin: 0 0 12px 0;
+  text-shadow: 0 4px 40px rgba(0, 0, 0, 0.5);
+}
+
+.mission-tagline {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 20px;
+  font-style: italic;
+  color: var(--stardust);
+  letter-spacing: 0.02em;
+}
+
+.mission-phase {
+  position: absolute;
+  left: 60px;
+  bottom: 180px;
+  max-width: 480px;
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+.mission-phase.animate {
+  animation: phaseSlideIn 0.8s ease-out forwards;
+}
+
+@keyframes phaseSlideIn {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.phase-number {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 64px;
+  font-weight: 300;
+  color: rgba(88, 166, 255, 0.2);
+  line-height: 1;
+  margin-bottom: -20px;
+}
+
+.phase-name {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 36px;
+  font-weight: 400;
+  color: var(--starlight);
+  margin: 0 0 8px 0;
+}
+
+.phase-subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: var(--ice);
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+.phase-description {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--stardust);
+}
+
+.mission-progress {
+  position: absolute;
+  bottom: 60px;
+  left: 60px;
+  right: 60px;
+}
+
+.progress-bar {
+  height: 2px;
+  background: rgba(125, 133, 144, 0.3);
+  border-radius: 1px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--ice), var(--sol));
+  border-radius: 1px;
+  transition: width 0.3s ease;
+}
+
+.progress-stats {
+  display: flex;
+  gap: 40px;
+}
+
+.progress-stats .stat {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--stardust);
+}
+
+.progress-stats .stat strong {
+  color: var(--starlight);
+  font-weight: 400;
+}
+
+.mission-controls {
+  position: absolute;
+  top: 60px;
+  right: 60px;
+}
+
+.control-btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  padding: 10px 20px;
+  background: rgba(13, 17, 23, 0.8);
+  border: 1px solid var(--nebula);
+  border-radius: 6px;
+  color: var(--stardust);
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+  transition: all 0.2s ease;
+}
+
+.control-btn:hover {
+  background: var(--nebula);
+  color: var(--starlight);
+  border-color: var(--stardust);
+}
