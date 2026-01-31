@@ -108,14 +108,15 @@ export class Earth {
 
     this.mesh = new THREE.Mesh(geometry, this.material);
 
-    // Atmosphere
-    const atmosphereGeometry = new THREE.SphereGeometry(radius * 1.015, 64, 64);
+    // Atmosphere - rendered as front-facing glow ring
+    const atmosphereGeometry = new THREE.SphereGeometry(radius * 1.02, 64, 64);
     const atmosphereMaterial = new THREE.ShaderMaterial({
       vertexShader: Earth.atmosphereVertexShader,
       fragmentShader: Earth.atmosphereFragmentShader,
-      side: THREE.BackSide,
+      side: THREE.FrontSide,
       transparent: true,
       depthWrite: false,
+      blending: THREE.AdditiveBlending,
     });
     this.atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
 
@@ -152,11 +153,15 @@ export class Earth {
 
   update(time: number): void {
     // Rotate Earth (one rotation per 24 hours, sped up for demo)
-    this.mesh.rotation.y = time * 0.00001;
+    // Use modulo to prevent floating point precision issues with large time values
+    const rotationPeriod = 2 * Math.PI / 0.00001; // Period before wrap
+    const wrappedTime = time % rotationPeriod;
+    this.mesh.rotation.y = wrappedTime * 0.00001;
     this.atmosphere.rotation.y = this.mesh.rotation.y;
 
-    // Update sun direction based on time
-    const sunAngle = time * 0.0001;
+    // Update sun direction based on time (wrap sun angle to avoid precision issues)
+    const sunPeriod = 2 * Math.PI / 0.0001;
+    const sunAngle = (time % sunPeriod) * 0.0001;
     this.material.uniforms.sunDirection.value.set(
       Math.cos(sunAngle),
       0.2,

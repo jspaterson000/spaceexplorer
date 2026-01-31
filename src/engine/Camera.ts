@@ -32,7 +32,7 @@ export class Camera {
       minZoom = 6.5, // ~3000km - just above Earth surface
       maxZoom = 9,   // ~1M km - edge of Phase 1
       initialZoom = 7.5, // ~30,000 km
-      damping = 0.1,
+      damping = 0.08, // Smoother interpolation
     } = config;
 
     this.camera = new THREE.PerspectiveCamera(fov, 1, near, far);

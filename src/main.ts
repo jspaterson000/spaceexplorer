@@ -77,7 +77,9 @@ let lastMouse = { x: 0, y: 0 };
 
 canvas.addEventListener('wheel', (e) => {
   e.preventDefault();
-  const delta = e.deltaY > 0 ? 0.1 : -0.1;
+  // Normalize delta to handle different scroll speeds/devices
+  const normalizedDelta = Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY), 100) / 100;
+  const delta = normalizedDelta * 0.03; // Much smaller zoom step
   orbitCamera.zoom(delta);
 }, { passive: false });
 
