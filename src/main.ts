@@ -35,6 +35,10 @@ moon.addToScene(scene);
 // Navigation
 const navigation = new Navigation(orbitCamera);
 navigation.setMoonMesh(moon.mesh);
+navigation.setOnBodyChange((body) => {
+  // Hide satellites when viewing Moon (they're Earth satellites)
+  satellites.mesh.visible = body === 'earth';
+});
 
 // Satellites
 const satellites = new Satellites(renderer.capabilities.maxSatellites);
