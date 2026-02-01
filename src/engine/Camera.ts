@@ -109,6 +109,20 @@ export class Camera {
     return this.currentCenter.clone();
   }
 
+  setOrreryView(): void {
+    // Top-down angled view for orrery
+    this.targetSpherical.phi = Math.PI / 4; // 45 degrees from vertical
+    this.targetSpherical.theta = 0;
+    this.targetLogDistance = 12; // Far out to see whole system
+    this.targetCenter.set(0, 0, 0); // Center on Sun
+    this.autoRotateEnabled = false;
+  }
+
+  setPlanetView(target: THREE.Vector3, zoom: number): void {
+    this.targetCenter.copy(target);
+    this.targetLogDistance = zoom;
+  }
+
   update(): void {
     // Cinematic auto-rotation (until first manual interaction)
     if (this.autoRotateEnabled) {
