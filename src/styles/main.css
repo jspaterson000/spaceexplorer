@@ -602,7 +602,9 @@ html, body {
 /* Hide UI during mission preview */
 .mission-active #title-card,
 .mission-active #journey-dock,
-.mission-active #mission-preview .mission-start-btn {
+.mission-active #mission-preview .mission-start-btn,
+.mission-active #scale-nav,
+.mission-active #time-controls {
   opacity: 0 !important;
   pointer-events: none !important;
   transition: opacity 0.5s ease;
