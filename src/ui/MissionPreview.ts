@@ -2,14 +2,22 @@
 import * as THREE from 'three';
 import { Camera } from '../engine/Camera';
 
-interface MissionPhase {
+interface CinematicPhase {
   name: string;
   subtitle: string;
   description: string;
   duration: number; // ms
-  cameraTarget: () => THREE.Vector3;
-  cameraZoom: number;
-  progress: number; // 0-1 position along trajectory
+  trajectoryStart: number; // 0-1
+  trajectoryEnd: number; // 0-1
+  camera: {
+    startZoom: number;
+    endZoom: number;
+    startTheta: number;
+    endTheta: number;
+    startPhi: number;
+    endPhi: number;
+    followSpacecraft: boolean;
+  };
 }
 
 export class MissionPreview {
@@ -22,16 +30,27 @@ export class MissionPreview {
   private trajectoryLine: THREE.Line | null = null;
   private scene: THREE.Scene;
   private moonPosition: () => THREE.Vector3;
+  private spacecraftMarker: THREE.Sprite | null = null;
+  private satellitesMesh: THREE.Points | null = null;
+  private satellitesWereVisible = false;
 
-  private phases: MissionPhase[];
+  // Smoothed camera state for buttery transitions
+  private smoothedTarget = new THREE.Vector3();
+  private smoothedZoom = 7.5;
+  private smoothedTheta = 0;
+  private smoothedPhi = Math.PI / 2.2;
+  private readonly smoothing = 0.04; // Lower = smoother
+
+  private phases: CinematicPhase[];
 
   // Trajectory points (will be calculated based on Earth-Moon positions)
   private trajectoryPoints: THREE.Vector3[] = [];
 
-  constructor(camera: Camera, scene: THREE.Scene, moonPosition: () => THREE.Vector3) {
+  constructor(camera: Camera, scene: THREE.Scene, moonPosition: () => THREE.Vector3, satellitesMesh?: THREE.Points) {
     this.camera = camera;
     this.scene = scene;
     this.moonPosition = moonPosition;
+    this.satellitesMesh = satellitesMesh || null;
 
     // Create container
     this.container = document.createElement('div');
@@ -73,75 +92,133 @@ export class MissionPreview {
     `;
     document.body.appendChild(this.overlay);
 
-    // Define mission phases
+    // Define cinematic mission phases
+    // Trajectory structure: orbit (0-0.35), outbound (0.36-0.58), flyby (0.59-0.77), return (0.77-1.0)
     this.phases = [
       {
         name: 'Launch',
         subtitle: 'Kennedy Space Center, Florida',
         description: 'The Space Launch System, the most powerful rocket ever built, carries Orion and four astronauts into Earth orbit.',
-        duration: 6000,
-        cameraTarget: () => new THREE.Vector3(0, 0, 0),
-        cameraZoom: 7.2,
-        progress: 0,
+        duration: 5000,
+        trajectoryStart: 0.00,
+        trajectoryEnd: 0.08,
+        camera: {
+          startZoom: 7.3,
+          endZoom: 7.5,
+          startTheta: 0,
+          endTheta: 0.3,
+          startPhi: Math.PI / 2.2,
+          endPhi: Math.PI / 2.1,
+          followSpacecraft: false,
+        },
       },
       {
         name: 'Earth Orbit',
         subtitle: 'Systems Check',
         description: 'Orion completes up to two orbits of Earth while the crew verifies spacecraft systems before the journey to the Moon.',
-        duration: 5000,
-        cameraTarget: () => new THREE.Vector3(0, 0, 0),
-        cameraZoom: 7.5,
-        progress: 0.05,
+        duration: 6000,
+        trajectoryStart: 0.08,
+        trajectoryEnd: 0.35,
+        camera: {
+          startZoom: 7.5,
+          endZoom: 7.6,
+          startTheta: 0.3,
+          endTheta: Math.PI * 0.8,
+          startPhi: Math.PI / 2.1,
+          endPhi: Math.PI / 2.3,
+          followSpacecraft: true,
+        },
       },
       {
         name: 'Trans-Lunar Injection',
         subtitle: 'Leaving Earth Behind',
         description: 'The Interim Cryogenic Propulsion Stage fires, accelerating Orion to 24,500 mph—fast enough to escape Earth\'s gravity.',
         duration: 6000,
-        cameraTarget: () => new THREE.Vector3(0, 0, 0),
-        cameraZoom: 8.2,
-        progress: 0.15,
+        trajectoryStart: 0.35,
+        trajectoryEnd: 0.45,
+        camera: {
+          startZoom: 7.6,
+          endZoom: 8.2,
+          startTheta: Math.PI * 0.8,
+          endTheta: Math.PI * 1.0,
+          startPhi: Math.PI / 2.3,
+          endPhi: Math.PI / 2.5,
+          followSpacecraft: true,
+        },
       },
       {
         name: 'Outbound Transit',
         subtitle: '4 Days to the Moon',
         description: 'The crew travels through the vast emptiness between Earth and Moon, farther from home than any humans in history.',
-        duration: 7000,
-        cameraTarget: () => this.getTrajectoryPoint(0.4),
-        cameraZoom: 8.8,
-        progress: 0.4,
+        duration: 8000,
+        trajectoryStart: 0.45,
+        trajectoryEnd: 0.59,
+        camera: {
+          startZoom: 8.2,
+          endZoom: 8.4,
+          startTheta: Math.PI * 1.0,
+          endTheta: Math.PI * 1.2,
+          startPhi: Math.PI / 2.5,
+          endPhi: Math.PI / 2.2,
+          followSpacecraft: true,
+        },
       },
       {
         name: 'Lunar Flyby',
         subtitle: 'The Far Side',
         description: 'Orion swings around the Moon at just 6,400 miles altitude, giving the crew breathtaking views of the lunar far side.',
-        duration: 8000,
-        cameraTarget: () => this.moonPosition(),
-        cameraZoom: 7.5,
-        progress: 0.6,
+        duration: 9000,
+        trajectoryStart: 0.59,
+        trajectoryEnd: 0.77,
+        camera: {
+          startZoom: 8.4,
+          endZoom: 7.4,
+          startTheta: Math.PI * 1.2,
+          endTheta: Math.PI * 1.5,
+          startPhi: Math.PI / 2.2,
+          endPhi: Math.PI / 2.0,
+          followSpacecraft: true,
+        },
       },
       {
         name: 'Return Transit',
         subtitle: 'Homeward Bound',
         description: 'Using the Moon\'s gravity, Orion slingshots back toward Earth on a free-return trajectory.',
-        duration: 6000,
-        cameraTarget: () => this.getTrajectoryPoint(0.8),
-        cameraZoom: 8.5,
-        progress: 0.8,
+        duration: 7000,
+        trajectoryStart: 0.77,
+        trajectoryEnd: 0.94,
+        camera: {
+          startZoom: 7.4,
+          endZoom: 8.2,
+          startTheta: Math.PI * 1.5,
+          endTheta: Math.PI * 1.8,
+          startPhi: Math.PI / 2.0,
+          endPhi: Math.PI / 2.3,
+          followSpacecraft: true,
+        },
       },
       {
         name: 'Earth Return',
         subtitle: 'Splashdown',
         description: 'After 10 days in space, Orion re-enters Earth\'s atmosphere at 25,000 mph and splashes down in the Pacific Ocean.',
         duration: 6000,
-        cameraTarget: () => new THREE.Vector3(0, 0, 0),
-        cameraZoom: 7.3,
-        progress: 1.0,
+        trajectoryStart: 0.94,
+        trajectoryEnd: 1.00,
+        camera: {
+          startZoom: 8.2,
+          endZoom: 7.2,
+          startTheta: Math.PI * 1.8,
+          endTheta: Math.PI * 2.0,
+          startPhi: Math.PI / 2.3,
+          endPhi: Math.PI / 2.1,
+          followSpacecraft: false,
+        },
       },
     ];
 
     this.setupEventListeners();
     this.createTrajectory();
+    this.createSpacecraftMarker();
   }
 
   private setupEventListeners(): void {
@@ -150,6 +227,41 @@ export class MissionPreview {
 
     const closeBtn = this.overlay.querySelector('#mission-close');
     closeBtn?.addEventListener('click', () => this.stop());
+  }
+
+  private createSpacecraftMarker(): void {
+    // Create radial gradient texture for glowing effect
+    const canvas = document.createElement('canvas');
+    canvas.width = 128;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+
+    if (ctx) {
+      const gradient = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+      gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+      gradient.addColorStop(0.2, 'rgba(255, 230, 180, 0.9)');
+      gradient.addColorStop(0.4, 'rgba(255, 200, 100, 0.6)');
+      gradient.addColorStop(0.7, 'rgba(255, 180, 50, 0.3)');
+      gradient.addColorStop(1, 'rgba(255, 150, 0, 0)');
+
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, 128, 128);
+    }
+
+    const texture = new THREE.CanvasTexture(canvas);
+    const material = new THREE.SpriteMaterial({
+      map: texture,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+
+    this.spacecraftMarker = new THREE.Sprite(material);
+    // Size ~500km visual
+    const markerSize = 500_000;
+    this.spacecraftMarker.scale.set(markerSize, markerSize, 1);
+    this.spacecraftMarker.visible = false;
+    this.scene.add(this.spacecraftMarker);
   }
 
   private createTrajectory(): void {
@@ -264,8 +376,22 @@ export class MissionPreview {
 
   private getTrajectoryPoint(progress: number): THREE.Vector3 {
     if (this.trajectoryPoints.length === 0) return new THREE.Vector3();
-    const index = Math.floor(progress * (this.trajectoryPoints.length - 1));
-    return this.trajectoryPoints[Math.min(index, this.trajectoryPoints.length - 1)].clone();
+    const scaledProgress = progress * (this.trajectoryPoints.length - 1);
+    const index = Math.floor(scaledProgress);
+    const nextIndex = Math.min(index + 1, this.trajectoryPoints.length - 1);
+    const t = scaledProgress - index;
+    // Smoothly interpolate between trajectory points
+    return this.trajectoryPoints[index].clone().lerp(this.trajectoryPoints[nextIndex], t);
+  }
+
+  private easeInOutCubic(t: number): number {
+    return t < 0.5
+      ? 4 * t * t * t
+      : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  }
+
+  private lerp(a: number, b: number, t: number): number {
+    return a + (b - a) * t;
   }
 
   start(): void {
@@ -277,6 +403,25 @@ export class MissionPreview {
     if (this.trajectoryLine) {
       this.trajectoryLine.visible = true;
     }
+    if (this.spacecraftMarker) {
+      this.spacecraftMarker.visible = true;
+    }
+
+    // Hide satellites during mission preview (remember original state)
+    if (this.satellitesMesh) {
+      this.satellitesWereVisible = this.satellitesMesh.visible;
+      this.satellitesMesh.visible = false;
+    }
+
+    // Disable camera auto-rotation during preview
+    this.camera.setAutoRotate(false);
+
+    // Initialize smoothed camera values from first phase
+    const firstPhase = this.phases[0];
+    this.smoothedTarget.set(0, 0, 0);
+    this.smoothedZoom = firstPhase.camera.startZoom;
+    this.smoothedTheta = firstPhase.camera.startTheta;
+    this.smoothedPhi = firstPhase.camera.startPhi;
 
     // Hide other UI elements via body class
     document.body.classList.add('mission-active');
@@ -289,6 +434,14 @@ export class MissionPreview {
     this.overlay.classList.add('hidden');
     if (this.trajectoryLine) {
       this.trajectoryLine.visible = false;
+    }
+    if (this.spacecraftMarker) {
+      this.spacecraftMarker.visible = false;
+    }
+
+    // Restore satellites to their previous state
+    if (this.satellitesMesh) {
+      this.satellitesMesh.visible = this.satellitesWereVisible;
     }
 
     // Restore UI elements
@@ -321,10 +474,42 @@ export class MissionPreview {
     const elapsed = now - this.phaseStartTime;
     const phase = this.phases[this.currentPhaseIndex];
 
-    // Update camera
-    const target = phase.cameraTarget();
-    this.camera.setTargetImmediate(target.x, target.y, target.z);
-    this.camera.setZoom(phase.cameraZoom);
+    // Calculate eased progress within current phase
+    const rawT = Math.min(elapsed / phase.duration, 1);
+    const t = this.easeInOutCubic(rawT);
+
+    // Move spacecraft marker along trajectory
+    const trajectoryT = this.lerp(phase.trajectoryStart, phase.trajectoryEnd, t);
+    const spacecraftPos = this.getTrajectoryPoint(trajectoryT);
+    if (this.spacecraftMarker) {
+      this.spacecraftMarker.position.copy(spacecraftPos);
+
+      // Pulse the marker size slightly for visual interest
+      const pulse = 1 + 0.1 * Math.sin(now * 0.005);
+      const baseSize = 500_000;
+      this.spacecraftMarker.scale.set(baseSize * pulse, baseSize * pulse, 1);
+    }
+
+    // Calculate target camera properties
+    const targetZoom = this.lerp(phase.camera.startZoom, phase.camera.endZoom, t);
+    const targetTheta = this.lerp(phase.camera.startTheta, phase.camera.endTheta, t);
+    const targetPhi = this.lerp(phase.camera.startPhi, phase.camera.endPhi, t);
+
+    // Determine camera target position
+    const targetPos = phase.camera.followSpacecraft
+      ? spacecraftPos.clone()
+      : new THREE.Vector3(0, 0, 0);
+
+    // Apply exponential smoothing for buttery camera movement
+    this.smoothedTarget.lerp(targetPos, this.smoothing);
+    this.smoothedZoom += (targetZoom - this.smoothedZoom) * this.smoothing;
+    this.smoothedTheta += (targetTheta - this.smoothedTheta) * this.smoothing;
+    this.smoothedPhi += (targetPhi - this.smoothedPhi) * this.smoothing;
+
+    // Apply smoothed values to camera
+    this.camera.setTargetImmediate(this.smoothedTarget.x, this.smoothedTarget.y, this.smoothedTarget.z);
+    this.camera.setZoom(this.smoothedZoom);
+    this.camera.setAngleImmediate(this.smoothedTheta, this.smoothedPhi);
 
     // Update progress bar
     const totalDuration = this.phases.reduce((sum, p) => sum + p.duration, 0);
@@ -337,11 +522,11 @@ export class MissionPreview {
 
     // Update stats
     const moonDist = this.moonPosition().length();
-    const currentDist = Math.abs(phase.progress - 0.5) < 0.2 ? moonDist * phase.progress : moonDist * phase.progress;
+    const currentDist = spacecraftPos.length();
     const distanceEl = document.getElementById('mission-distance');
     const dayEl = document.getElementById('mission-day');
     if (distanceEl) distanceEl.textContent = this.formatDistance(currentDist);
-    if (dayEl) dayEl.textContent = String(Math.ceil(phase.progress * 10) || 1);
+    if (dayEl) dayEl.textContent = String(Math.ceil(trajectoryT * 10) || 1);
 
     // Check for phase transition
     if (elapsed >= phase.duration) {

@@ -52,10 +52,23 @@ export class Earth {
 
       vec3 normal = normalize(vNormalWorld);
       float sunDot = dot(normal, sunDirection);
-      float dayFactor = smoothstep(-0.1, 0.2, sunDot);
+
+      // Sharper day/night transition
+      float dayFactor = smoothstep(-0.05, 0.15, sunDot);
+
+      // Additional darkening for the night side
+      float nightDarkening = smoothstep(0.0, -0.3, sunDot);
 
       vec3 dayColor = hasDay ? texture2D(dayMap, vUv).rgb : vec3(0.1, 0.3, 0.6);
-      vec3 nightColor = hasNight ? texture2D(nightMap, vUv).rgb * 1.5 : vec3(0.02, 0.02, 0.05);
+
+      // Darken the ground texture significantly on the night side
+      vec3 darkGround = dayColor * 0.02;
+
+      // City lights from night texture (boosted for visibility)
+      vec3 cityLights = hasNight ? texture2D(nightMap, vUv).rgb * 2.0 : vec3(0.0);
+
+      // Night side: dark ground + city lights
+      vec3 nightColor = darkGround + cityLights * nightDarkening;
 
       vec3 color = mix(nightColor, dayColor, dayFactor);
 

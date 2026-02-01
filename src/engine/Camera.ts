@@ -35,7 +35,7 @@ export class Camera {
       near = 1,
       far = 1e15,
       minZoom = 6.5, // ~3000km - just above Earth surface
-      maxZoom = 11,  // ~100M km - enough to see Sun journey
+      maxZoom = 13,  // ~10B km - enough to see Neptune at 4.5B km
       initialZoom = 7.5, // ~30,000 km
       damping = 0.08, // Smoother interpolation
       autoRotateSpeed = 0.0003, // Subtle cinematic drift
@@ -103,6 +103,17 @@ export class Camera {
   setZoom(logDistance: number): void {
     this._logDistance = logDistance;
     this.targetLogDistance = logDistance;
+  }
+
+  setAngleImmediate(theta: number, phi: number): void {
+    this.spherical.theta = theta;
+    this.spherical.phi = phi;
+    this.targetSpherical.theta = theta;
+    this.targetSpherical.phi = phi;
+  }
+
+  setAutoRotate(enabled: boolean): void {
+    this.autoRotateEnabled = enabled;
   }
 
   getTarget(): THREE.Vector3 {

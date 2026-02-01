@@ -7,12 +7,15 @@ import { LogScale } from './engine/LogScale';
 import { Earth } from './objects/Earth';
 import { Moon } from './objects/Moon';
 import { Sun } from './objects/Sun';
+import { Mercury, Venus, Mars } from './objects/planets/RockyPlanet';
+import { Jupiter, Uranus, Neptune } from './objects/planets/GasGiant';
+import { Saturn } from './objects/planets/Saturn';
 import { Satellites } from './objects/Satellites';
 import { SatelliteWorker } from './data/SatelliteWorker';
 import { fetchAllTLEs } from './data/celestrak';
 import { TLECache } from './data/cache';
 import { InfoCard } from './ui/InfoCard';
-import { Navigation } from './ui/Navigation';
+import { Navigation, CelestialBody } from './ui/Navigation';
 import { MissionPreview } from './ui/MissionPreview';
 import { ScaleLevelState, ScaleLevel } from './state/ScaleLevel';
 import { SimulatedTime } from './state/SimulatedTime';
@@ -32,7 +35,7 @@ scene.background = new THREE.Color(0x05060a);
 const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
 scene.add(ambientLight);
 
-// Earth
+// Earth (at origin in this visualization)
 const earth = new Earth();
 earth.addToScene(scene);
 
@@ -55,19 +58,47 @@ const orbitalPaths = Object.entries(ORBITAL_ELEMENTS).map(([name, elements]) => 
   return { name, path };
 });
 
+// Planets
+const mercury = new Mercury();
+mercury.addToScene(scene);
+
+const venus = new Venus();
+venus.addToScene(scene);
+
+const mars = new Mars();
+mars.addToScene(scene);
+
+const jupiter = new Jupiter();
+jupiter.addToScene(scene);
+
+const saturn = new Saturn();
+saturn.addToScene(scene);
+
+const uranus = new Uranus();
+uranus.addToScene(scene);
+
+const neptune = new Neptune();
+neptune.addToScene(scene);
+
 // Navigation
 const navigation = new Navigation(orbitCamera);
+
+// Register all celestial body meshes with navigation
 navigation.setMoonMesh(moon.mesh);
 navigation.setSunMesh(sun.mesh);
+navigation.setMercuryMesh(mercury.mesh);
+navigation.setVenusMesh(venus.mesh);
+navigation.setMarsMesh(mars.mesh);
+navigation.setJupiterMesh(jupiter.mesh);
+navigation.setSaturnMesh(saturn.mesh);
+navigation.setUranusMesh(uranus.mesh);
+navigation.setNeptuneMesh(neptune.mesh);
 navigation.setOnBodyChange((body) => {
   // Hide satellites when not viewing Earth (they're Earth satellites)
   satellites.mesh.visible = body === 'earth';
   // Track the last focused body for returning from orrery mode
   scaleLevelState.setLastFocusedBody(body);
 });
-
-// Mission Preview
-const missionPreview = new MissionPreview(orbitCamera, scene, () => moon.mesh.position.clone());
 
 // Scale navigation
 const scaleNavContainer = document.getElementById('scale-nav')!;
@@ -100,6 +131,50 @@ scaleLevelNav.setOnLevelChange((level) => {
 // Satellites
 const satellites = new Satellites(renderer.capabilities.maxSatellites);
 satellites.addToScene(scene);
+let satellitesEnabled = true;
+let currentBody: CelestialBody = 'earth';
+
+// Settings panel
+const settingsBtn = document.getElementById('settings-btn')!;
+const settingsPanel = document.getElementById('settings-panel')!;
+const settingsContainer = document.getElementById('settings-container')!;
+const satelliteToggle = document.getElementById('satellite-toggle') as HTMLInputElement;
+const satelliteRow = document.getElementById('stat-satellites-row')!;
+
+settingsBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  settingsPanel.classList.toggle('hidden');
+});
+
+// Close settings when clicking outside
+document.addEventListener('click', (e) => {
+  if (!settingsContainer.contains(e.target as Node)) {
+    settingsPanel.classList.add('hidden');
+  }
+});
+
+satelliteToggle.addEventListener('change', () => {
+  satellitesEnabled = satelliteToggle.checked;
+  satellites.mesh.visible = satellitesEnabled && currentBody === 'earth';
+});
+
+navigation.setOnBodyChange((body) => {
+  currentBody = body;
+  // Hide satellites when not viewing Earth (they're Earth satellites)
+  satellites.mesh.visible = satellitesEnabled && body === 'earth';
+  // Hide satellite stats row when not viewing Earth
+  satelliteRow.classList.toggle('hidden', body !== 'earth');
+});
+
+// Mission Preview
+const missionPreview = new MissionPreview(orbitCamera, scene, () => moon.mesh.position.clone(), satellites.mesh);
+
+// Artemis mission button in menu
+const artemisBtn = document.getElementById('artemis-btn')!;
+artemisBtn.addEventListener('click', () => {
+  settingsPanel.classList.add('hidden');
+  missionPreview.start();
+});
 
 // Worker for orbital propagation
 const worker = new SatelliteWorker();
@@ -184,13 +259,15 @@ canvas.addEventListener('wheel', (e) => {
   orbitCamera.zoom(delta);
 }, { passive: false });
 
-canvas.addEventListener('mousedown', (e) => {
+canvas.addEventListener('pointerdown', (e) => {
   isDragging = true;
   lastMouse = { x: e.clientX, y: e.clientY };
   mouseDownPos = { x: e.clientX, y: e.clientY };
+  // Capture pointer to receive events even when moving outside canvas
+  canvas.setPointerCapture(e.pointerId);
 });
 
-canvas.addEventListener('mousemove', (e) => {
+canvas.addEventListener('pointermove', (e) => {
   if (!isDragging) return;
   const deltaX = e.clientX - lastMouse.x;
   const deltaY = e.clientY - lastMouse.y;
@@ -200,7 +277,7 @@ canvas.addEventListener('mousemove', (e) => {
   lastMouse = { x: e.clientX, y: e.clientY };
 });
 
-canvas.addEventListener('mouseup', (e) => {
+canvas.addEventListener('pointerup', (e) => {
   const dx = e.clientX - mouseDownPos.x;
   const dy = e.clientY - mouseDownPos.y;
   const distance = Math.sqrt(dx * dx + dy * dy);
@@ -211,9 +288,27 @@ canvas.addEventListener('mouseup', (e) => {
   }
 
   isDragging = false;
+  canvas.releasePointerCapture(e.pointerId);
 });
 
-canvas.addEventListener('mouseleave', () => { isDragging = false; });
+canvas.addEventListener('pointercancel', (e) => {
+  isDragging = false;
+  canvas.releasePointerCapture(e.pointerId);
+});
+
+// All celestial body meshes for raycasting
+const celestialMeshes: Record<string, THREE.Object3D> = {
+  earth: earth.mesh,
+  moon: moon.mesh,
+  sun: sun.mesh,
+  mercury: mercury.mesh,
+  venus: venus.mesh,
+  mars: mars.mesh,
+  jupiter: jupiter.mesh,
+  saturn: saturn.mesh,
+  uranus: uranus.mesh,
+  neptune: neptune.mesh,
+};
 
 // Handle satellite selection via raycasting
 function handleSatelliteClick(event: MouseEvent) {
@@ -227,11 +322,7 @@ function handleSatelliteClick(event: MouseEvent) {
   raycaster.setFromCamera(mouse, orbitCamera.camera);
 
   // Check for celestial body clicks first
-  const bodyClicked = navigation.checkBodyClick(raycaster, {
-    earth: earth.mesh,
-    moon: moon.mesh,
-    sun: sun.mesh,
-  });
+  const bodyClicked = navigation.checkBodyClick(raycaster, celestialMeshes);
 
   if (bodyClicked) {
     navigation.flyTo(bodyClicked);
@@ -315,6 +406,20 @@ function animate() {
   const dateForMoon = scaleLevelState.isOrreryMode() ? simulatedTime.getDate() : new Date();
   moon.updatePosition(dateForMoon);
   moon.setSunDirection(earth.sunDirection);
+
+  // Update planet positions - use simulated time in orrery mode
+  const dateForPlanets = scaleLevelState.isOrreryMode() ? simulatedTime.getDate() : new Date();
+  mercury.updatePosition(dateForPlanets);
+  venus.updatePosition(dateForPlanets);
+  mars.updatePosition(dateForPlanets);
+  jupiter.updatePosition(dateForPlanets);
+  jupiter.update(time);
+  saturn.updatePosition(dateForPlanets);
+  saturn.update(time);
+  uranus.updatePosition(dateForPlanets);
+  uranus.update(time);
+  neptune.updatePosition(dateForPlanets);
+  neptune.update(time);
 
   // Request satellite positions with real time
   worker.requestPositions(Date.now());
