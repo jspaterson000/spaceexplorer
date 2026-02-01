@@ -44,12 +44,37 @@ export class Saturn extends GasGiant {
   }
 
   /**
+   * Override updateOrreryPosition to also update rings
+   */
+  updateOrreryPosition(date: Date = new Date()): void {
+    super.updateOrreryPosition(date);
+
+    if (this.rings) {
+      this.rings.setSunDirection(this.sunDirection);
+      this.rings.updatePlanetPosition(this.mesh.position);
+    }
+  }
+
+  /**
    * Override setSunDirection to also update rings
    */
   setSunDirection(direction: THREE.Vector3): void {
     super.setSunDirection(direction);
     if (this.rings) {
       this.rings.setSunDirection(direction);
+    }
+  }
+
+  /**
+   * Override setOrreryMode to also update ring uniforms
+   */
+  setOrreryMode(enabled: boolean): void {
+    super.setOrreryMode(enabled);
+
+    if (this.rings) {
+      // Update ring shader uniforms to match the new scale
+      const scale = enabled ? this.mesh.scale.x : 1;
+      this.rings.setScale(scale, this.visualRadius);
     }
   }
 

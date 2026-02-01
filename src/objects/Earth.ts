@@ -1,5 +1,6 @@
 // src/objects/Earth.ts
 import * as THREE from 'three';
+import { ORBITAL_ELEMENTS, calculateOrreryPosition } from './planets/PlanetData';
 
 export interface EarthConfig {
   radius?: number;
@@ -203,6 +204,47 @@ export class Earth {
 
   get sunDirection(): THREE.Vector3 {
     return this.material.uniforms.sunDirection.value;
+  }
+
+  /**
+   * Update Earth's position for orrery mode (heliocentric with sqrt scaling)
+   */
+  updateOrreryPosition(date: Date = new Date()): void {
+    const [x, y, z] = calculateOrreryPosition(ORBITAL_ELEMENTS.earth, date);
+    this.mesh.position.set(x, y, z);
+    this.atmosphere.position.set(x, y, z);
+
+    // In orrery mode, sun is at origin, so direction is toward origin
+    this.material.uniforms.sunDirection.value.set(-x, -y, -z).normalize();
+  }
+
+  /**
+   * Reset Earth to origin (normal Earth-centric mode)
+   */
+  resetPosition(): void {
+    this.mesh.position.set(0, 0, 0);
+    this.atmosphere.position.set(0, 0, 0);
+  }
+
+  /**
+   * Set orrery mode - scales Earth to be visible at solar system scale
+   */
+  setOrreryMode(enabled: boolean): void {
+    if (enabled) {
+      // Target ~3 billion meters radius (Earth is the reference)
+      const EARTH_RADIUS = 6_371_000;
+      const BASE_ORRERY_RADIUS = 3e9;
+      const targetRadius = BASE_ORRERY_RADIUS;
+
+      // Earth mesh radius is EARTH_RADIUS, so scale directly
+      const orreryScale = targetRadius / EARTH_RADIUS;
+
+      this.mesh.scale.setScalar(orreryScale);
+      this.atmosphere.scale.setScalar(orreryScale);
+    } else {
+      this.mesh.scale.setScalar(1);
+      this.atmosphere.scale.setScalar(1);
+    }
   }
 
   addToScene(scene: THREE.Scene): void {

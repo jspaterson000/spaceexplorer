@@ -9,6 +9,11 @@
   --pulse: #f97316;
 }
 
+/* Utility class */
+.hidden {
+  display: none !important;
+}
+
 @font-face {
   font-family: 'JetBrains Mono';
   src: url('https://fonts.gstatic.com/s/jetbrainsmono/v18/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKxjPVmUsaaDhw.woff2') format('woff2');
@@ -939,4 +944,71 @@ html, body {
   width: 1px;
   height: 20px;
   background: var(--nebula);
+}
+
+/* Planet Labels (Orrery Mode) */
+.planet-label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  white-space: nowrap;
+  pointer-events: none;
+  margin-left: 50px;
+}
+
+/* Line starts at 0 width, draws out */
+.planet-label-line {
+  width: 0;
+  height: 1px;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.4);
+  transition: width 0.6s ease-out;
+}
+
+.planet-label.line-visible .planet-label-line {
+  width: 40px;
+}
+
+/* Text starts invisible, fades in */
+.planet-label-name {
+  margin-left: 6px;
+  font-family: 'Playfair Display', serif;
+  font-size: 12px;
+  font-weight: 400;
+  color: rgba(230, 237, 243, 0.85);
+  letter-spacing: 0.5px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  transform: translateX(-5px);
+  transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+}
+
+.planet-label.text-visible .planet-label-name {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.planet-label.jupiter,
+.planet-label.saturn,
+.planet-label.uranus,
+.planet-label.neptune {
+  margin-left: 60px;
+}
+
+.planet-label.oort-cloud {
+  margin-left: 60px;
+}
+
+.planet-label.oort-cloud .planet-label-line {
+  opacity: 0.5;
+}
+
+.planet-label.oort-cloud.line-visible .planet-label-line {
+  width: 25px;
+}
+
+.planet-label.oort-cloud .planet-label-name {
+  font-size: 11px;
+  font-style: italic;
+  opacity: 0.7;
 }

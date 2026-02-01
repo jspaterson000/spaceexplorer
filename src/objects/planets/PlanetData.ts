@@ -309,3 +309,32 @@ export function calculateOrbitalPosition(
 
   return [x, y, z];
 }
+
+// Astronomical Unit in meters
+const AU_IN_METERS = 149_597_870_700;
+
+/**
+ * Calculate orrery-mode position from orbital elements
+ * Uses heliocentric (Sun-centered) coordinates with sqrt scaling
+ * to match the orbital path rendering exactly
+ * Returns position in meters [x, y, z]
+ */
+export function calculateOrreryPosition(
+  elements: OrbitalElements,
+  date: Date = new Date()
+): [number, number, number] {
+  // Get heliocentric position (sun at origin)
+  const [x, y, z] = calculateHeliocentricPosition(elements, date);
+
+  // Calculate distance from sun in AU
+  const distance = Math.sqrt(x * x + y * y + z * z);
+  const distanceAU = distance / AU_IN_METERS;
+
+  // Apply sqrt scaling to compress outer orbits (same as OrbitalPath)
+  // Scale factor: sqrt(d) / d where d is distance in AU
+  // This keeps direction but scales down outer planets
+  const scale = distanceAU > 0 ? Math.sqrt(distanceAU) / distanceAU : 1;
+
+  // Apply scale - matches OrbitalPath.calculateOrbitPoints exactly
+  return [x * scale, y * scale, z * scale];
+}

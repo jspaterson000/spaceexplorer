@@ -4,6 +4,7 @@ import {
   OrbitalElements,
   PlanetPhysicalData,
   calculateOrbitalPosition,
+  calculateOrreryPosition,
 } from './PlanetData';
 
 /**
@@ -147,6 +148,18 @@ export abstract class Planet {
   }
 
   /**
+   * Update planet position for orrery mode (heliocentric with sqrt scaling)
+   */
+  updateOrreryPosition(date: Date = new Date()): void {
+    const [x, y, z] = calculateOrreryPosition(this.orbitalElements, date);
+    this.mesh.position.set(x, y, z);
+
+    // Update sun direction (from planet toward sun at origin in orrery mode)
+    this.sunDirection.set(-x, -y, -z).normalize();
+    this.material.uniforms.sunDirection.value.copy(this.sunDirection);
+  }
+
+  /**
    * Set sun direction for lighting
    */
   setSunDirection(direction: THREE.Vector3): void {
@@ -180,5 +193,30 @@ export abstract class Planet {
    */
   getDefaultZoom(): number {
     return this.physicalData.defaultZoom;
+  }
+
+  /**
+   * Set orrery mode - scales planet to be visible at solar system scale
+   * Uses heavily compressed scaling so all planets are similar size
+   * with gas giants only slightly larger than rocky planets
+   */
+  setOrreryMode(enabled: boolean): void {
+    if (enabled) {
+      // Target: all planets between 2-6 billion meters radius
+      // Use very compressed scaling: radius^0.12 gives minimal variation
+      // Earth (6371km) = 1.0, Jupiter = 1.35, Mercury = 0.92
+      const EARTH_RADIUS = 6_371_000;
+      const BASE_ORRERY_RADIUS = 3e9; // 3 billion meters base
+      const sizeVariation = Math.pow(this.physicalData.radiusReal / EARTH_RADIUS, 0.12);
+      const targetRadius = BASE_ORRERY_RADIUS * sizeVariation;
+
+      // Scale factor to achieve target radius from current visual radius
+      const orreryScale = targetRadius / this.visualRadius;
+
+      this.mesh.scale.setScalar(orreryScale);
+    } else {
+      // Reset to normal scale
+      this.mesh.scale.setScalar(1);
+    }
   }
 }

@@ -22,6 +22,8 @@ import { SimulatedTime } from './state/SimulatedTime';
 import { ScaleLevelNav } from './ui/ScaleLevelNav';
 import { TimeControls } from './ui/TimeControls';
 import { OrbitalPath } from './objects/OrbitalPath';
+import { OortCloud } from './objects/OortCloud';
+import { PlanetLabels } from './ui/PlanetLabels';
 import { ORBITAL_ELEMENTS } from './objects/planets/PlanetData';
 
 const canvas = document.getElementById('canvas') as HTMLCanvasElement;
@@ -58,6 +60,10 @@ const orbitalPaths = Object.entries(ORBITAL_ELEMENTS).map(([name, elements]) => 
   return { name, path };
 });
 
+// Oort Cloud (visible in orrery mode)
+const oortCloud = new OortCloud();
+oortCloud.addToScene(scene);
+
 // Planets
 const mercury = new Mercury();
 mercury.addToScene(scene);
@@ -79,6 +85,41 @@ uranus.addToScene(scene);
 
 const neptune = new Neptune();
 neptune.addToScene(scene);
+
+// Planet labels (visible in orrery mode)
+const planetLabels = new PlanetLabels(document.body, scene);
+
+// Define label colors matching planet appearances
+const labelConfigs: Array<{ id: string; name: string; color: string; mesh: THREE.Object3D }> = [
+  { id: 'sun', name: 'Sun', color: '#ffee88', mesh: sun.mesh },
+  { id: 'mercury', name: 'Mercury', color: '#8c8c8c', mesh: mercury.mesh },
+  { id: 'venus', name: 'Venus', color: '#e6c65c', mesh: venus.mesh },
+  { id: 'earth', name: 'Earth', color: '#6b93d6', mesh: earth.mesh },
+  { id: 'mars', name: 'Mars', color: '#c1440e', mesh: mars.mesh },
+  { id: 'jupiter', name: 'Jupiter', color: '#d8ca9d', mesh: jupiter.mesh },
+  { id: 'saturn', name: 'Saturn', color: '#ead6b8', mesh: saturn.mesh },
+  { id: 'uranus', name: 'Uranus', color: '#b1e1e6', mesh: uranus.mesh },
+  { id: 'neptune', name: 'Neptune', color: '#5b5ddf', mesh: neptune.mesh },
+];
+
+labelConfigs.forEach(({ id, name, color, mesh }) => {
+  planetLabels.addLabel(id, {
+    name,
+    color,
+    getPosition: () => mesh.position.clone(),
+  });
+});
+
+// Add Oort Cloud label at the edge
+planetLabels.addLabel('oort', {
+  name: 'Oort Cloud',
+  color: '#6688bb',
+  getPosition: () => new THREE.Vector3(
+    Math.sqrt(65) * 149_597_870_700, // Position at edge of cloud
+    0,
+    0
+  ),
+});
 
 // Navigation
 const navigation = new Navigation(orbitCamera);
@@ -108,23 +149,70 @@ const scaleLevelNav = new ScaleLevelNav(scaleNavContainer, scaleLevelState);
 const timeControlsContainer = document.getElementById('time-controls')!;
 const timeControls = new TimeControls(timeControlsContainer, simulatedTime);
 
+// Title card elements for orrery mode
+const titleElement = document.querySelector('#title-card .title') as HTMLElement;
+const factsElement = document.getElementById('body-facts')!;
+const statsElement = document.querySelector('#title-card .stats') as HTMLElement;
+
 // Handle scale level changes
 scaleLevelNav.setOnLevelChange((level) => {
   const isOrrery = level === ScaleLevel.SolarSystem;
 
-  // Show/hide orbital paths
+  // Show/hide orbital paths, Oort Cloud, and labels
   orbitalPaths.forEach(({ path }) => path.setVisible(isOrrery));
+  oortCloud.setVisible(isOrrery);
+  planetLabels.setVisible(isOrrery);
+
+  // Set orrery mode on Sun (moves to origin, scales up)
+  sun.setOrreryMode(isOrrery);
+
+  // Set orrery mode on all planets (scales them to be visible)
+  earth.setOrreryMode(isOrrery);
+  mercury.setOrreryMode(isOrrery);
+  venus.setOrreryMode(isOrrery);
+  mars.setOrreryMode(isOrrery);
+  jupiter.setOrreryMode(isOrrery);
+  saturn.setOrreryMode(isOrrery);
+  uranus.setOrreryMode(isOrrery);
+  neptune.setOrreryMode(isOrrery);
+
+  // Hide moon and satellites in orrery mode (too small to see at solar system scale)
+  moon.mesh.visible = !isOrrery;
+  satellites.mesh.visible = !isOrrery && satellitesEnabled;
+
+  // Update title card for orrery mode
+  if (isOrrery) {
+    titleElement.textContent = 'Solar System';
+    factsElement.innerHTML = `
+      <div class="fact-row"><span class="fact-label">Type</span><span class="fact-value">Planetary System</span></div>
+      <div class="fact-row"><span class="fact-label">Age</span><span class="fact-value">4.6 billion years</span></div>
+      <div class="fact-row"><span class="fact-label">Planets</span><span class="fact-value">8</span></div>
+      <div class="fact-row"><span class="fact-label">Known Moons</span><span class="fact-value">290+</span></div>
+      <div class="fact-row"><span class="fact-label">Diameter</span><span class="fact-value">~30 AU</span></div>
+      <div class="fact-highlight">One of ~100 billion planetary systems in our galaxy</div>
+    `;
+    // Hide satellite stats in orrery mode
+    statsElement.classList.add('hidden');
+  } else {
+    // Restore stats visibility
+    statsElement.classList.remove('hidden');
+  }
 
   // Show/hide time controls
   if (isOrrery) {
     timeControls.show();
-    // Zoom out for orrery view
-    orbitCamera.setZoom(11.5);
+    // Set top-down angled view for orrery
+    orbitCamera.setOrreryView();
   } else {
     timeControls.hide();
     simulatedTime.reset();
-    // Return to last focused body
-    navigation.flyTo(scaleLevelState.lastFocusedBody as any);
+    // Reset Earth to origin for normal Earth-centric view
+    earth.resetPosition();
+    // Smoothly return camera to last focused body
+    const lastBody = scaleLevelState.lastFocusedBody;
+    const bodyConfig = { earth: 7.5, moon: 7.5, sun: 9.8, mercury: 8.0, venus: 8.0, mars: 8.0, jupiter: 8.6, saturn: 8.7, uranus: 8.5, neptune: 8.5 };
+    const zoom = bodyConfig[lastBody as keyof typeof bodyConfig] || 7.5;
+    orbitCamera.returnFromOrreryView(new THREE.Vector3(0, 0, 0), zoom);
   }
 });
 
@@ -404,27 +492,54 @@ function animate() {
 
   // Use real time or simulated time for moon
   const dateForMoon = scaleLevelState.isOrreryMode() ? simulatedTime.getDate() : new Date();
-  moon.updatePosition(dateForMoon);
+  if (scaleLevelState.isOrreryMode()) {
+    // In orrery mode, Moon follows Earth's position
+    moon.updateOrreryPosition(dateForMoon, earth.mesh.position);
+  } else {
+    moon.updatePosition(dateForMoon);
+  }
   moon.setSunDirection(earth.sunDirection);
 
-  // Update planet positions - use simulated time in orrery mode
+  // Update planet positions - use simulated time and orrery positions in orrery mode
   const dateForPlanets = scaleLevelState.isOrreryMode() ? simulatedTime.getDate() : new Date();
-  mercury.updatePosition(dateForPlanets);
-  venus.updatePosition(dateForPlanets);
-  mars.updatePosition(dateForPlanets);
-  jupiter.updatePosition(dateForPlanets);
+  const isOrrery = scaleLevelState.isOrreryMode();
+
+  if (isOrrery) {
+    // In orrery mode, use heliocentric positions with sqrt scaling
+    earth.updateOrreryPosition(dateForPlanets);
+    mercury.updateOrreryPosition(dateForPlanets);
+    venus.updateOrreryPosition(dateForPlanets);
+    mars.updateOrreryPosition(dateForPlanets);
+    jupiter.updateOrreryPosition(dateForPlanets);
+    saturn.updateOrreryPosition(dateForPlanets);
+    uranus.updateOrreryPosition(dateForPlanets);
+    neptune.updateOrreryPosition(dateForPlanets);
+  } else {
+    // In normal mode, use Earth-centric compressed positions
+    mercury.updatePosition(dateForPlanets);
+    venus.updatePosition(dateForPlanets);
+    mars.updatePosition(dateForPlanets);
+    jupiter.updatePosition(dateForPlanets);
+    saturn.updatePosition(dateForPlanets);
+    uranus.updatePosition(dateForPlanets);
+    neptune.updatePosition(dateForPlanets);
+  }
+
+  // Update gas giant animations
   jupiter.update(time);
-  saturn.updatePosition(dateForPlanets);
   saturn.update(time);
-  uranus.updatePosition(dateForPlanets);
   uranus.update(time);
-  neptune.updatePosition(dateForPlanets);
   neptune.update(time);
 
   // Request satellite positions with real time
   worker.requestPositions(Date.now());
 
   renderer.render(scene, orbitCamera.camera);
+
+  // Update and render planet labels (orrery mode)
+  planetLabels.update();
+  planetLabels.render(orbitCamera.camera);
+
   updateStats();
 }
 

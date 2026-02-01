@@ -112,6 +112,52 @@ export class Moon {
     this.mesh.position.set(x, y, z);
   }
 
+  /**
+   * Update Moon's position for orrery mode, relative to Earth's orrery position
+   * Moon orbit is scaled down to be visible relative to the sqrt-scaled planetary distances
+   */
+  updateOrreryPosition(date: Date | undefined, earthPosition: THREE.Vector3): void {
+    // Calculate Moon's orbital position
+    const now = date ? date.getTime() : Date.now();
+
+    const j2000 = Date.UTC(2000, 0, 1, 12, 0, 0);
+    const elapsed = now - j2000;
+
+    const phase = (elapsed % LUNAR_MONTH) / LUNAR_MONTH * Math.PI * 2;
+    const inclination = 5.1 * Math.PI / 180;
+
+    // Scale moon distance for orrery visibility (real distance is too small to see)
+    const orreryMoonDistance = MOON_DISTANCE * 50; // Scale up significantly for visibility
+
+    const x = Math.cos(phase) * orreryMoonDistance;
+    const z = Math.sin(phase) * orreryMoonDistance * Math.cos(inclination);
+    const y = Math.sin(phase) * orreryMoonDistance * Math.sin(inclination);
+
+    // Position relative to Earth's orrery position
+    this.mesh.position.set(
+      earthPosition.x + x,
+      earthPosition.y + y,
+      earthPosition.z + z
+    );
+  }
+
+  /**
+   * Set orrery mode - scales Moon to be visible at solar system scale
+   */
+  setOrreryMode(enabled: boolean): void {
+    if (enabled) {
+      // Moon should be smaller than planets but still visible
+      // Target ~2 billion meters radius
+      const MOON_VISUAL_RADIUS = 1_737_000 * 3; // MOON_RADIUS * visual scale
+      const TARGET_RADIUS = 2e9;
+      const orreryScale = TARGET_RADIUS / MOON_VISUAL_RADIUS;
+
+      this.mesh.scale.setScalar(orreryScale);
+    } else {
+      this.mesh.scale.setScalar(1);
+    }
+  }
+
   setSunDirection(direction: THREE.Vector3): void {
     this.material.uniforms.sunDirection.value.copy(direction);
   }

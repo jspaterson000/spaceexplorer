@@ -7,6 +7,8 @@ export class Sun {
   private core: THREE.Mesh;
   private glow: THREE.Mesh;
   private lensflare: Lensflare;
+  private orreryLensflare: Lensflare;
+  private orreryFlareTimeout: ReturnType<typeof setTimeout> | null = null;
 
   // Compressed distance for navigation (real: 150M km, using 30M km)
   private static readonly DISTANCE = 30_000_000_000; // 30 million km in meters
@@ -105,6 +107,14 @@ export class Sun {
 
     this.mesh.add(this.lensflare);
 
+    // Create subtle lens flare for orrery mode (much smaller)
+    this.orreryLensflare = new Lensflare();
+    this.orreryLensflare.addElement(new LensflareElement(flareTexture, 150, 0, new THREE.Color(0xffffee)));
+    this.orreryLensflare.addElement(new LensflareElement(flareTexture, 80, 0, new THREE.Color(0xffeecc)));
+    this.orreryLensflare.addElement(new LensflareElement(flareRingTexture, 40, 0.5, new THREE.Color(0xffcc88)));
+    this.orreryLensflare.visible = false;
+    this.mesh.add(this.orreryLensflare);
+
     // Position the sun (simplified - along +X axis)
     this.mesh.position.set(Sun.DISTANCE, 0, 0);
   }
@@ -191,5 +201,45 @@ export class Sun {
   // Get direction from origin to sun (for lighting)
   getDirectionFromOrigin(): THREE.Vector3 {
     return this.mesh.position.clone().normalize();
+  }
+
+  /**
+   * Set orrery mode - moves Sun to origin, scales up, and shows subtle glow
+   */
+  setOrreryMode(enabled: boolean): void {
+    // Clear any pending timeout
+    if (this.orreryFlareTimeout) {
+      clearTimeout(this.orreryFlareTimeout);
+      this.orreryFlareTimeout = null;
+    }
+
+    if (enabled) {
+      // In orrery mode, Sun is at origin (heliocentric)
+      this.mesh.position.set(0, 0, 0);
+
+      // Sun should be clearly the largest object
+      // Target: ~8 billion meter radius (about 2.5x Earth's orrery size)
+      // Sun.RADIUS = 348 million meters
+      const TARGET_RADIUS = 8e9;
+      const orreryScale = TARGET_RADIUS / Sun.RADIUS;
+      this.mesh.scale.setScalar(orreryScale);
+
+      // Hide all flares initially
+      this.lensflare.visible = false;
+      this.orreryLensflare.visible = false;
+      this.glow.visible = true;
+
+      // Show subtle orrery flare after transition (2.5 seconds)
+      this.orreryFlareTimeout = setTimeout(() => {
+        this.orreryLensflare.visible = true;
+      }, 2500);
+    } else {
+      // Normal mode - Sun at compressed distance, normal size
+      this.mesh.position.set(Sun.DISTANCE, 0, 0);
+      this.mesh.scale.setScalar(1);
+      this.lensflare.visible = true;
+      this.orreryLensflare.visible = false;
+      this.glow.visible = true;
+    }
   }
 }

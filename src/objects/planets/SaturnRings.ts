@@ -184,4 +184,15 @@ export class SaturnRings {
   updatePlanetPosition(position: THREE.Vector3): void {
     this.material.uniforms.planetPosition.value.copy(position);
   }
+
+  /**
+   * Update ring uniforms for orrery mode scaling
+   */
+  setScale(scale: number, planetRadius: number): void {
+    const innerRadius = planetRadius * scale * SaturnRings.INNER_RADIUS_RATIO;
+    const outerRadius = planetRadius * scale * SaturnRings.OUTER_RADIUS_RATIO;
+    this.material.uniforms.innerRadius.value = innerRadius;
+    this.material.uniforms.outerRadius.value = outerRadius;
+    this.material.uniforms.planetRadius.value = planetRadius * scale;
+  }
 }

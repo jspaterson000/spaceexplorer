@@ -13,6 +13,29 @@ export interface CameraConfig {
   autoRotateSpeed?: number;
 }
 
+// Easing functions for cinematic transitions
+const easeInOutCubic = (t: number): number => {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+};
+
+const easeOutQuart = (t: number): number => {
+  return 1 - Math.pow(1 - t, 4);
+};
+
+interface TransitionState {
+  active: boolean;
+  startTime: number;
+  duration: number;
+  startLogDistance: number;
+  startPhi: number;
+  startTheta: number;
+  startCenter: THREE.Vector3;
+  targetLogDistance: number;
+  targetPhi: number;
+  targetTheta: number;
+  targetCenter: THREE.Vector3;
+}
+
 export class Camera {
   readonly camera: THREE.PerspectiveCamera;
 
@@ -25,9 +48,26 @@ export class Camera {
 
   private readonly minZoom: number;
   private readonly maxZoom: number;
-  private readonly damping: number;
+  private readonly baseDamping: number;
+  private damping: number;
   private readonly autoRotateSpeed: number;
   private autoRotateEnabled = true;
+  private transitionEndTime = 0;
+
+  // Cinematic transition state
+  private transition: TransitionState = {
+    active: false,
+    startTime: 0,
+    duration: 0,
+    startLogDistance: 0,
+    startPhi: 0,
+    startTheta: 0,
+    startCenter: new THREE.Vector3(),
+    targetLogDistance: 0,
+    targetPhi: 0,
+    targetTheta: 0,
+    targetCenter: new THREE.Vector3(),
+  };
 
   constructor(config: CameraConfig = {}) {
     const {
@@ -44,6 +84,7 @@ export class Camera {
     this.camera = new THREE.PerspectiveCamera(fov, 1, near, far);
     this.minZoom = minZoom;
     this.maxZoom = maxZoom;
+    this.baseDamping = damping;
     this.damping = damping;
     this.autoRotateSpeed = autoRotateSpeed;
 
@@ -121,12 +162,39 @@ export class Camera {
   }
 
   setOrreryView(): void {
-    // Top-down angled view for orrery
-    this.targetSpherical.phi = Math.PI / 4; // 45 degrees from vertical
-    this.targetSpherical.theta = 0;
-    this.targetLogDistance = 12; // Far out to see whole system
-    this.targetCenter.set(0, 0, 0); // Center on Sun
+    // Start cinematic transition to orrery view
+    this.transition = {
+      active: true,
+      startTime: performance.now(),
+      duration: 3500, // 3.5 seconds for grand sweep
+      startLogDistance: this._logDistance,
+      startPhi: this.spherical.phi,
+      startTheta: this.spherical.theta,
+      startCenter: this.currentCenter.clone(),
+      targetLogDistance: 11.8, // See whole system
+      targetPhi: Math.PI / 6, // 30 degrees from vertical
+      targetTheta: this.spherical.theta + Math.PI * 0.15, // Slight rotation during transition
+      targetCenter: new THREE.Vector3(0, 0, 0), // Center on Sun
+    };
+
     this.autoRotateEnabled = false;
+  }
+
+  returnFromOrreryView(target: THREE.Vector3, zoom: number): void {
+    // Start cinematic transition back to planet
+    this.transition = {
+      active: true,
+      startTime: performance.now(),
+      duration: 2500, // 2.5 seconds
+      startLogDistance: this._logDistance,
+      startPhi: this.spherical.phi,
+      startTheta: this.spherical.theta,
+      startCenter: this.currentCenter.clone(),
+      targetLogDistance: zoom,
+      targetPhi: Math.PI / 2.2, // Equatorial view
+      targetTheta: this.spherical.theta - Math.PI * 0.1, // Slight counter-rotation
+      targetCenter: target.clone(),
+    };
   }
 
   setPlanetView(target: THREE.Vector3, zoom: number): void {
@@ -135,6 +203,47 @@ export class Camera {
   }
 
   update(): void {
+    // Handle cinematic transitions with easing
+    if (this.transition.active) {
+      const elapsed = performance.now() - this.transition.startTime;
+      const progress = Math.min(elapsed / this.transition.duration, 1);
+      const eased = easeInOutCubic(progress);
+
+      // Interpolate all values with easing
+      this._logDistance = this.transition.startLogDistance +
+        (this.transition.targetLogDistance - this.transition.startLogDistance) * eased;
+      this.spherical.phi = this.transition.startPhi +
+        (this.transition.targetPhi - this.transition.startPhi) * eased;
+      this.spherical.theta = this.transition.startTheta +
+        (this.transition.targetTheta - this.transition.startTheta) * eased;
+      this.currentCenter.lerpVectors(
+        this.transition.startCenter,
+        this.transition.targetCenter,
+        eased
+      );
+
+      // Update targets to match for when transition ends
+      this.targetLogDistance = this._logDistance;
+      this.targetSpherical.phi = this.spherical.phi;
+      this.targetSpherical.theta = this.spherical.theta;
+      this.targetCenter.copy(this.currentCenter);
+
+      // End transition
+      if (progress >= 1) {
+        this.transition.active = false;
+      }
+
+      this.spherical.radius = LogScale.logDistanceToMeters(this._logDistance);
+      this.updateCameraPosition();
+      return;
+    }
+
+    // Restore normal damping after transition completes
+    if (this.transitionEndTime > 0 && performance.now() > this.transitionEndTime) {
+      this.damping = this.baseDamping;
+      this.transitionEndTime = 0;
+    }
+
     // Cinematic auto-rotation (until first manual interaction)
     if (this.autoRotateEnabled) {
       this.targetSpherical.theta += this.autoRotateSpeed;
