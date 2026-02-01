@@ -14,6 +14,12 @@ import { TLECache } from './data/cache';
 import { InfoCard } from './ui/InfoCard';
 import { Navigation } from './ui/Navigation';
 import { MissionPreview } from './ui/MissionPreview';
+import { ScaleLevelState, ScaleLevel } from './state/ScaleLevel';
+import { SimulatedTime } from './state/SimulatedTime';
+import { ScaleLevelNav } from './ui/ScaleLevelNav';
+import { TimeControls } from './ui/TimeControls';
+import { OrbitalPath } from './objects/OrbitalPath';
+import { ORBITAL_ELEMENTS } from './objects/planets/PlanetData';
 
 const canvas = document.getElementById('canvas') as HTMLCanvasElement;
 const renderer = new Renderer({ canvas });
@@ -38,6 +44,17 @@ moon.addToScene(scene);
 const sun = new Sun();
 sun.addToScene(scene);
 
+// Scale level state
+const scaleLevelState = new ScaleLevelState();
+const simulatedTime = new SimulatedTime();
+
+// Orbital paths (visible in orrery mode)
+const orbitalPaths = Object.entries(ORBITAL_ELEMENTS).map(([name, elements]) => {
+  const path = new OrbitalPath(elements, 0x4488ff);
+  path.addToScene(scene);
+  return { name, path };
+});
+
 // Navigation
 const navigation = new Navigation(orbitCamera);
 navigation.setMoonMesh(moon.mesh);
@@ -45,10 +62,40 @@ navigation.setSunMesh(sun.mesh);
 navigation.setOnBodyChange((body) => {
   // Hide satellites when not viewing Earth (they're Earth satellites)
   satellites.mesh.visible = body === 'earth';
+  // Track the last focused body for returning from orrery mode
+  scaleLevelState.setLastFocusedBody(body);
 });
 
 // Mission Preview
 const missionPreview = new MissionPreview(orbitCamera, scene, () => moon.mesh.position.clone());
+
+// Scale navigation
+const scaleNavContainer = document.getElementById('scale-nav')!;
+const scaleLevelNav = new ScaleLevelNav(scaleNavContainer, scaleLevelState);
+
+// Time controls
+const timeControlsContainer = document.getElementById('time-controls')!;
+const timeControls = new TimeControls(timeControlsContainer, simulatedTime);
+
+// Handle scale level changes
+scaleLevelNav.setOnLevelChange((level) => {
+  const isOrrery = level === ScaleLevel.SolarSystem;
+
+  // Show/hide orbital paths
+  orbitalPaths.forEach(({ path }) => path.setVisible(isOrrery));
+
+  // Show/hide time controls
+  if (isOrrery) {
+    timeControls.show();
+    // Zoom out for orrery view
+    orbitCamera.setZoom(11.5);
+  } else {
+    timeControls.hide();
+    simulatedTime.reset();
+    // Return to last focused body
+    navigation.flyTo(scaleLevelState.lastFocusedBody as any);
+  }
+});
 
 // Satellites
 const satellites = new Satellites(renderer.capabilities.maxSatellites);
@@ -243,23 +290,34 @@ function updateStats() {
 }
 
 let startTime = performance.now();
+let lastFrameTime = performance.now();
 
 function animate() {
   requestAnimationFrame(animate);
-  const time = performance.now() - startTime;
-  const now = Date.now();
+  const now = performance.now();
+  const deltaMs = now - lastFrameTime;
+  lastFrameTime = now;
+
+  const time = now - startTime;
+
+  // Update simulated time in orrery mode
+  if (scaleLevelState.isOrreryMode()) {
+    simulatedTime.update(deltaMs);
+    timeControls.update();
+  }
 
   orbitCamera.update();
   navigation.update();
   missionPreview.update();
   earth.update(time);
 
-  // Sync Moon with Earth's sun direction and update orbital position
-  moon.updatePosition();
+  // Use real time or simulated time for moon
+  const dateForMoon = scaleLevelState.isOrreryMode() ? simulatedTime.getDate() : new Date();
+  moon.updatePosition(dateForMoon);
   moon.setSunDirection(earth.sunDirection);
 
-  // Request new satellite positions
-  worker.requestPositions(now);
+  // Request satellite positions with real time
+  worker.requestPositions(Date.now());
 
   renderer.render(scene, orbitCamera.camera);
   updateStats();

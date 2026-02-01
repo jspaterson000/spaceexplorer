@@ -89,10 +89,10 @@ export class Moon {
     }
   }
 
-  updatePosition(): void {
+  updatePosition(date?: Date): void {
     // Calculate Moon's orbital position based on current time
     // Using simplified circular orbit
-    const now = Date.now();
+    const now = date ? date.getTime() : Date.now();
 
     // Reference: Jan 1, 2000 at 12:00 UTC (J2000 epoch)
     const j2000 = Date.UTC(2000, 0, 1, 12, 0, 0);
