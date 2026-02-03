@@ -1,9 +1,10 @@
 export enum ScaleLevel {
   Planet = 'planet',
   SolarSystem = 'solar-system',
+  Stellar = 'stellar',
 }
 
-const LEVELS = [ScaleLevel.Planet, ScaleLevel.SolarSystem];
+const LEVELS = [ScaleLevel.Planet, ScaleLevel.SolarSystem, ScaleLevel.Stellar];
 
 export class ScaleLevelState {
   private _current: ScaleLevel = ScaleLevel.Planet;
@@ -47,5 +48,9 @@ export class ScaleLevelState {
 
   isOrreryMode(): boolean {
     return this._current === ScaleLevel.SolarSystem;
+  }
+
+  isStellarMode(): boolean {
+    return this._current === ScaleLevel.Stellar;
   }
 }

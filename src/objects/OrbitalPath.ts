@@ -8,6 +8,10 @@ export class OrbitalPath {
   readonly line: THREE.Line;
   private readonly orbitalElements: OrbitalElements;
   private visible = false;
+  private material: THREE.LineBasicMaterial;
+  private baseOpacity = 0.3;
+  private targetOpacity = 0.3;
+  private currentOpacity = 0.3;
 
   constructor(
     orbitalElements: OrbitalElements,
@@ -19,14 +23,14 @@ export class OrbitalPath {
     const points = this.calculateOrbitPoints(segments);
     const geometry = new THREE.BufferGeometry().setFromPoints(points);
 
-    const material = new THREE.LineBasicMaterial({
+    this.material = new THREE.LineBasicMaterial({
       color,
       transparent: true,
-      opacity: 0.3,
+      opacity: this.baseOpacity,
       depthWrite: false,
     });
 
-    this.line = new THREE.Line(geometry, material);
+    this.line = new THREE.Line(geometry, this.material);
     this.line.visible = this.visible;
   }
 
@@ -78,6 +82,35 @@ export class OrbitalPath {
   setVisible(visible: boolean): void {
     this.visible = visible;
     this.line.visible = visible;
+    if (visible) {
+      this.currentOpacity = this.baseOpacity;
+      this.targetOpacity = this.baseOpacity;
+      this.material.opacity = this.baseOpacity;
+    }
+  }
+
+  /**
+   * Set target opacity for smooth fade transitions
+   */
+  setOpacity(opacity: number): void {
+    this.targetOpacity = opacity * this.baseOpacity;
+  }
+
+  /**
+   * Update opacity interpolation - call each frame for smooth fades
+   */
+  updateOpacity(damping = 0.08): void {
+    this.currentOpacity += (this.targetOpacity - this.currentOpacity) * damping;
+    this.material.opacity = this.currentOpacity;
+  }
+
+  /**
+   * Immediately set opacity without interpolation
+   */
+  setOpacityImmediate(opacity: number): void {
+    this.currentOpacity = opacity * this.baseOpacity;
+    this.targetOpacity = this.currentOpacity;
+    this.material.opacity = this.currentOpacity;
   }
 
   addToScene(scene: THREE.Scene): void {

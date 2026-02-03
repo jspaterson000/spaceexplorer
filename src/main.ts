@@ -25,6 +25,9 @@ import { OrbitalPath } from './objects/OrbitalPath';
 import { OortCloud } from './objects/OortCloud';
 import { PlanetLabels } from './ui/PlanetLabels';
 import { ORBITAL_ELEMENTS } from './objects/planets/PlanetData';
+import { Stars } from './objects/Stars';
+import { StarLabels } from './ui/StarLabels';
+import { getStarColor } from './data/NearbyStars';
 
 const canvas = document.getElementById('canvas') as HTMLCanvasElement;
 const renderer = new Renderer({ canvas });
@@ -121,6 +124,20 @@ planetLabels.addLabel('oort', {
   ),
 });
 
+// Stars (visible in stellar mode)
+const stars = new Stars();
+stars.addToScene(scene);
+
+// Star labels
+const starLabels = new StarLabels(document.body, scene);
+
+// Add labels for all stars (notable ones show always, others on hover)
+stars.getStars().forEach((star, index) => {
+  const position = stars.getStarPosition(index);
+  const color = getStarColor(star.spectralType);
+  starLabels.addLabel(star, position, color, star.notable);
+});
+
 // Navigation
 const navigation = new Navigation(orbitCamera);
 
@@ -154,34 +171,16 @@ const titleElement = document.querySelector('#title-card .title') as HTMLElement
 const factsElement = document.getElementById('body-facts')!;
 const statsElement = document.querySelector('#title-card .stats') as HTMLElement;
 
-// Handle scale level changes
-scaleLevelNav.setOnLevelChange((level) => {
-  const isOrrery = level === ScaleLevel.SolarSystem;
+// Stellar facts template
+const stellarFactsTemplate = document.getElementById('stellar-facts-template') as HTMLTemplateElement;
 
-  // Show/hide orbital paths, Oort Cloud, and labels
-  orbitalPaths.forEach(({ path }) => path.setVisible(isOrrery));
-  oortCloud.setVisible(isOrrery);
-  planetLabels.setVisible(isOrrery);
-
-  // Set orrery mode on Sun (moves to origin, scales up)
-  sun.setOrreryMode(isOrrery);
-
-  // Set orrery mode on all planets (scales them to be visible)
-  earth.setOrreryMode(isOrrery);
-  mercury.setOrreryMode(isOrrery);
-  venus.setOrreryMode(isOrrery);
-  mars.setOrreryMode(isOrrery);
-  jupiter.setOrreryMode(isOrrery);
-  saturn.setOrreryMode(isOrrery);
-  uranus.setOrreryMode(isOrrery);
-  neptune.setOrreryMode(isOrrery);
-
-  // Hide moon and satellites in orrery mode (too small to see at solar system scale)
-  moon.mesh.visible = !isOrrery;
-  satellites.mesh.visible = !isOrrery && satellitesEnabled;
-
-  // Update title card for orrery mode
-  if (isOrrery) {
+// Update title card based on scale level
+function updateTitleCardForLevel(level: ScaleLevel): void {
+  if (level === ScaleLevel.Planet) {
+    // Restore planet-specific info from Navigation's current body
+    navigation.refreshTitleCard();
+    statsElement.classList.remove('hidden');
+  } else if (level === ScaleLevel.SolarSystem) {
     titleElement.textContent = 'Solar System';
     factsElement.innerHTML = `
       <div class="fact-row"><span class="fact-label">Type</span><span class="fact-value">Planetary System</span></div>
@@ -191,29 +190,221 @@ scaleLevelNav.setOnLevelChange((level) => {
       <div class="fact-row"><span class="fact-label">Diameter</span><span class="fact-value">~30 AU</span></div>
       <div class="fact-highlight">One of ~100 billion planetary systems in our galaxy</div>
     `;
-    // Hide satellite stats in orrery mode
     statsElement.classList.add('hidden');
-  } else {
-    // Restore stats visibility
-    statsElement.classList.remove('hidden');
+  } else if (level === ScaleLevel.Stellar) {
+    titleElement.textContent = 'Stellar Neighborhood';
+    // Use template content for stellar facts
+    if (stellarFactsTemplate) {
+      factsElement.innerHTML = stellarFactsTemplate.innerHTML;
+    }
+    statsElement.classList.add('hidden');
   }
+}
 
-  // Show/hide time controls
-  if (isOrrery) {
-    timeControls.show();
-    // Set top-down angled view for orrery
-    orbitCamera.setOrreryView();
-  } else {
-    timeControls.hide();
-    simulatedTime.reset();
-    // Reset Earth to origin for normal Earth-centric view
-    earth.resetPosition();
-    // Smoothly return camera to last focused body
-    const lastBody = scaleLevelState.lastFocusedBody;
-    const bodyConfig = { earth: 7.5, moon: 7.5, sun: 9.8, mercury: 8.0, venus: 8.0, mars: 8.0, jupiter: 8.6, saturn: 8.7, uranus: 8.5, neptune: 8.5 };
-    const zoom = bodyConfig[lastBody as keyof typeof bodyConfig] || 7.5;
-    orbitCamera.returnFromOrreryView(new THREE.Vector3(0, 0, 0), zoom);
-  }
+// Journey dock element for hiding in stellar mode
+const journeyDock = document.getElementById('journey-dock')!;
+
+// Transition overlay for fade-to-black between scale levels
+const overlay = document.getElementById('transition-overlay')!;
+let transitionInProgress = false;
+
+// Visual scale level tracks what the animation loop should use.
+// Updated only when the screen is fully black, preventing jolts.
+let visualScaleLevel: ScaleLevel = ScaleLevel.Planet;
+
+/**
+ * Fade-to-black transition between scale levels.
+ * 1. Fade to black (~1s)
+ * 2. While blacked out: run setup() to swap all scene state instantly
+ * 3. Fade from black (~1s)
+ * 4. After visible: run afterReveal() for label entrance animations
+ */
+function fadeTransition(setup: () => void, afterReveal?: () => void): void {
+  if (transitionInProgress) return;
+  transitionInProgress = true;
+
+  overlay.classList.add('active');
+  // Wait for fade to fully complete before swapping scene state
+  const onBlack = () => {
+    overlay.removeEventListener('transitionend', onBlack);
+    setup();
+    overlay.classList.remove('active');
+    const onRevealed = () => {
+      overlay.removeEventListener('transitionend', onRevealed);
+      afterReveal?.();
+      transitionInProgress = false;
+    };
+    overlay.addEventListener('transitionend', onRevealed);
+  };
+  overlay.addEventListener('transitionend', onBlack);
+}
+
+// Handle scale level changes
+// Note: ScaleLevelNav updates scaleLevelState immediately on click,
+// but the animation loop uses scaleLevelState to decide how to update
+// planet positions. We must defer the state change until the screen is
+// black, otherwise planets jolt to new positions while still visible.
+scaleLevelNav.setOnLevelChange((level) => {
+  const isOrrery = level === ScaleLevel.SolarSystem;
+  const isStellar = level === ScaleLevel.Stellar;
+  const isPlanet = level === ScaleLevel.Planet;
+
+  fadeTransition(
+    // Setup: swap everything while screen is black
+    () => {
+      // Update visual level now that screen is black
+      visualScaleLevel = level;
+
+      // Set orrery mode on Sun (moves to origin, scales up)
+      sun.setOrreryMode(isOrrery || isStellar);
+
+      // Set orrery mode on all planets
+      earth.setOrreryMode(isOrrery || isStellar);
+      mercury.setOrreryMode(isOrrery || isStellar);
+      venus.setOrreryMode(isOrrery || isStellar);
+      mars.setOrreryMode(isOrrery || isStellar);
+      jupiter.setOrreryMode(isOrrery || isStellar);
+      saturn.setOrreryMode(isOrrery || isStellar);
+      uranus.setOrreryMode(isOrrery || isStellar);
+      neptune.setOrreryMode(isOrrery || isStellar);
+
+      // Update title card
+      updateTitleCardForLevel(level);
+
+      if (isOrrery) {
+        // ========================================
+        // Planet → Solar System  OR  Stellar → Solar System
+        // ========================================
+        orbitCamera.setPositionImmediate(12.2, Math.PI / 2.5, new THREE.Vector3(0, 0, 0), 0);
+
+        // Show solar system objects
+        sun.mesh.visible = true;
+        earth.mesh.visible = true;
+        earth.atmosphere.visible = true;
+        mercury.mesh.visible = true;
+        venus.mesh.visible = true;
+        mars.mesh.visible = true;
+        jupiter.mesh.visible = true;
+        saturn.mesh.visible = true;
+        uranus.mesh.visible = true;
+        neptune.mesh.visible = true;
+
+        // Hide moon and satellites (too small at this scale)
+        moon.mesh.visible = false;
+        satellites.mesh.visible = false;
+
+        // Show orbital paths and Oort Cloud
+        orbitalPaths.forEach(({ path }) => {
+          path.setVisible(true);
+          path.setOpacityImmediate(1);
+        });
+        oortCloud.setVisible(true);
+        oortCloud.setOpacityImmediate(1);
+
+        // Hide stellar elements
+        stars.setVisible(false);
+        starLabels.setVisible(false);
+
+        // Show journey dock, time controls
+        journeyDock.style.display = '';
+        timeControls.show();
+
+      } else if (isStellar) {
+        // ========================================
+        // Solar System → Stellar
+        // Start close, zoom out after fade reveals
+        // ========================================
+        orbitCamera.setPositionImmediate(11.3, Math.PI / 4, new THREE.Vector3(0, 0, 0));
+
+        // Hide all solar system objects
+        earth.mesh.visible = false;
+        earth.atmosphere.visible = false;
+        mercury.mesh.visible = false;
+        venus.mesh.visible = false;
+        mars.mesh.visible = false;
+        jupiter.mesh.visible = false;
+        saturn.mesh.visible = false;
+        uranus.mesh.visible = false;
+        neptune.mesh.visible = false;
+        moon.mesh.visible = false;
+        satellites.mesh.visible = false;
+        sun.mesh.visible = false;
+        sun.hideFlares();
+
+        // Hide solar system overlays
+        orbitalPaths.forEach(({ path }) => path.setVisible(false));
+        oortCloud.setVisible(false);
+        planetLabels.setVisible(false);
+
+        // Show stars at full opacity
+        stars.setVisible(true);
+        stars.setOpacity(1);
+
+        // Hide journey dock and time controls
+        journeyDock.style.display = 'none';
+        timeControls.hide();
+
+        // Enable auto-rotation for gentle drift
+        orbitCamera.setAutoRotate(true);
+
+        // Start zoom out now (during fade-in) so it's already moving when revealed
+        orbitCamera.animateZoomTo(11.9);
+
+      } else if (isPlanet) {
+        // ========================================
+        // Solar System/Stellar → Planet
+        // ========================================
+        const lastBody = scaleLevelState.lastFocusedBody;
+        const bodyConfig = { earth: 7.5, moon: 7.5, sun: 9.8, mercury: 8.0, venus: 8.0, mars: 8.0, jupiter: 8.6, saturn: 8.7, uranus: 8.5, neptune: 8.5 };
+        const zoom = bodyConfig[lastBody as keyof typeof bodyConfig] || 7.5;
+
+        // Reset Earth to origin for normal Earth-centric view
+        earth.resetPosition();
+
+        orbitCamera.setPositionImmediate(zoom, Math.PI / 2.2, new THREE.Vector3(0, 0, 0));
+
+        // Show all solar system objects in normal mode
+        sun.mesh.visible = true;
+        earth.mesh.visible = true;
+        earth.atmosphere.visible = true;
+        mercury.mesh.visible = true;
+        venus.mesh.visible = true;
+        mars.mesh.visible = true;
+        jupiter.mesh.visible = true;
+        saturn.mesh.visible = true;
+        uranus.mesh.visible = true;
+        neptune.mesh.visible = true;
+        moon.mesh.visible = true;
+        satellites.mesh.visible = satellitesEnabled;
+
+        // Hide all stellar/system overlays
+        stars.setVisible(false);
+        starLabels.setVisible(false);
+        orbitalPaths.forEach(({ path }) => path.setVisible(false));
+        oortCloud.setVisible(false);
+        planetLabels.setVisible(false);
+
+        // Show journey dock, hide time controls
+        journeyDock.style.display = '';
+        timeControls.hide();
+        simulatedTime.reset();
+      }
+    },
+    // After reveal: label entrance animations
+    () => {
+      if (isOrrery) {
+        planetLabels.setVisible(true);
+      } else if (isStellar) {
+        // Show star labels after zoom completes (zoom started in setup)
+        setTimeout(() => {
+          starLabels.setVisible(true);
+        }, 3000);
+      } else if (isPlanet) {
+        navigation.refreshTitleCard();
+      }
+    }
+  );
+
 });
 
 // Satellites
@@ -384,6 +575,35 @@ canvas.addEventListener('pointercancel', (e) => {
   canvas.releasePointerCapture(e.pointerId);
 });
 
+// Star hover detection raycaster (needs larger threshold for stellar distances)
+const starRaycaster = new THREE.Raycaster();
+starRaycaster.params.Points = { threshold: 5e10 }; // Threshold for stellar scale
+
+// Handle star hover for showing labels
+canvas.addEventListener('mousemove', (e) => {
+  // Only handle hover in stellar mode
+  if (!scaleLevelState.isStellarMode()) {
+    return;
+  }
+
+  // Convert mouse position to normalized device coordinates (-1 to +1)
+  mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+  starRaycaster.setFromCamera(mouse, orbitCamera.camera);
+  const intersects = starRaycaster.intersectObject(stars.mesh);
+
+  if (intersects.length > 0 && intersects[0].index !== undefined) {
+    const starIndex = intersects[0].index;
+    const starData = stars.getStars()[starIndex];
+    if (starData && !starData.notable) {
+      starLabels.showHoverLabel(starData.name);
+    }
+  } else {
+    starLabels.hideHoverLabel();
+  }
+});
+
 // All celestial body meshes for raycasting
 const celestialMeshes: Record<string, THREE.Object3D> = {
   earth: earth.mesh,
@@ -479,8 +699,11 @@ function animate() {
 
   const time = now - startTime;
 
+  // Use visual scale level for animation loop (not scaleLevelState which changes immediately on click)
+  const visualOrrery = visualScaleLevel === ScaleLevel.SolarSystem || visualScaleLevel === ScaleLevel.Stellar;
+
   // Update simulated time in orrery mode
-  if (scaleLevelState.isOrreryMode()) {
+  if (visualOrrery) {
     simulatedTime.update(deltaMs);
     timeControls.update();
   }
@@ -491,8 +714,8 @@ function animate() {
   earth.update(time);
 
   // Use real time or simulated time for moon
-  const dateForMoon = scaleLevelState.isOrreryMode() ? simulatedTime.getDate() : new Date();
-  if (scaleLevelState.isOrreryMode()) {
+  const dateForMoon = visualOrrery ? simulatedTime.getDate() : new Date();
+  if (visualOrrery) {
     // In orrery mode, Moon follows Earth's position
     moon.updateOrreryPosition(dateForMoon, earth.mesh.position);
   } else {
@@ -501,8 +724,8 @@ function animate() {
   moon.setSunDirection(earth.sunDirection);
 
   // Update planet positions - use simulated time and orrery positions in orrery mode
-  const dateForPlanets = scaleLevelState.isOrreryMode() ? simulatedTime.getDate() : new Date();
-  const isOrrery = scaleLevelState.isOrreryMode();
+  const dateForPlanets = visualOrrery ? simulatedTime.getDate() : new Date();
+  const isOrrery = visualOrrery;
 
   if (isOrrery) {
     // In orrery mode, use heliocentric positions with sqrt scaling
@@ -531,6 +754,10 @@ function animate() {
   uranus.update(time);
   neptune.update(time);
 
+  // Update opacity transitions for orbital paths and Oort Cloud
+  orbitalPaths.forEach(({ path }) => path.updateOpacity(0.06));
+  oortCloud.updateOpacity(0.06);
+
   // Request satellite positions with real time
   worker.requestPositions(Date.now());
 
@@ -539,6 +766,9 @@ function animate() {
   // Update and render planet labels (orrery mode)
   planetLabels.update();
   planetLabels.render(orbitCamera.camera);
+
+  // Render star labels (stellar mode)
+  starLabels.render(orbitCamera.camera);
 
   updateStats();
 }

@@ -206,6 +206,19 @@ export class Sun {
   /**
    * Set orrery mode - moves Sun to origin, scales up, and shows subtle glow
    */
+  /**
+   * Hide lens flares and glow for stellar mode where the sun is a distant point.
+   */
+  hideFlares(): void {
+    if (this.orreryFlareTimeout) {
+      clearTimeout(this.orreryFlareTimeout);
+      this.orreryFlareTimeout = null;
+    }
+    this.lensflare.visible = false;
+    this.orreryLensflare.visible = false;
+    this.glow.visible = false;
+  }
+
   setOrreryMode(enabled: boolean): void {
     // Clear any pending timeout
     if (this.orreryFlareTimeout) {

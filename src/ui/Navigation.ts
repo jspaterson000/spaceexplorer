@@ -444,6 +444,15 @@ export class Navigation {
     return this.currentBody;
   }
 
+  /**
+   * Refresh the title card to show current body info
+   * Call this when returning from orrery/stellar mode to planet mode
+   */
+  refreshTitleCard(): void {
+    this.titleElement.textContent = BODIES[this.currentBody].name;
+    this.updateFacts(this.currentBody);
+  }
+
   isNavigating(): boolean {
     return this.isFlying;
   }

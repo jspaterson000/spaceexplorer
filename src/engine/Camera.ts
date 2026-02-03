@@ -18,10 +18,6 @@ const easeInOutCubic = (t: number): number => {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 };
 
-const easeOutQuart = (t: number): number => {
-  return 1 - Math.pow(1 - t, 4);
-};
-
 interface TransitionState {
   active: boolean;
   startTime: number;
@@ -75,7 +71,7 @@ export class Camera {
       near = 1,
       far = 1e15,
       minZoom = 6.5, // ~3000km - just above Earth surface
-      maxZoom = 13,  // ~10B km - enough to see Neptune at 4.5B km
+      maxZoom = 15,  // ~10B km - enough to see Neptune at 4.5B km, extended for stellar distances
       initialZoom = 7.5, // ~30,000 km
       damping = 0.08, // Smoother interpolation
       autoRotateSpeed = 0.0003, // Subtle cinematic drift
@@ -146,6 +142,23 @@ export class Camera {
     this.targetLogDistance = logDistance;
   }
 
+  /** Smoothly animate zoom with easing (uses transition system) */
+  animateZoomTo(logDistance: number, duration = 4000): void {
+    this.transition = {
+      active: true,
+      startTime: performance.now(),
+      duration,
+      startLogDistance: this._logDistance,
+      startPhi: this.spherical.phi,
+      startTheta: this.spherical.theta,
+      startCenter: this.currentCenter.clone(),
+      targetLogDistance: logDistance,
+      targetPhi: this.spherical.phi,
+      targetTheta: this.spherical.theta,
+      targetCenter: this.currentCenter.clone(),
+    };
+  }
+
   setAngleImmediate(theta: number, phi: number): void {
     this.spherical.theta = theta;
     this.spherical.phi = phi;
@@ -161,40 +174,25 @@ export class Camera {
     return this.currentCenter.clone();
   }
 
-  setOrreryView(): void {
-    // Start cinematic transition to orrery view
-    this.transition = {
-      active: true,
-      startTime: performance.now(),
-      duration: 3500, // 3.5 seconds for grand sweep
-      startLogDistance: this._logDistance,
-      startPhi: this.spherical.phi,
-      startTheta: this.spherical.theta,
-      startCenter: this.currentCenter.clone(),
-      targetLogDistance: 11.8, // See whole system
-      targetPhi: Math.PI / 6, // 30 degrees from vertical
-      targetTheta: this.spherical.theta + Math.PI * 0.15, // Slight rotation during transition
-      targetCenter: new THREE.Vector3(0, 0, 0), // Center on Sun
-    };
-
+  /**
+   * Instantly set camera position without animation.
+   * Used during fade-to-black transitions where the screen is blacked out.
+   */
+  setPositionImmediate(logDistance: number, phi: number, center: THREE.Vector3, theta?: number): void {
+    this._logDistance = logDistance;
+    this.targetLogDistance = logDistance;
+    this.spherical.phi = phi;
+    this.targetSpherical.phi = phi;
+    if (theta !== undefined) {
+      this.spherical.theta = theta;
+      this.targetSpherical.theta = theta;
+    }
+    this.currentCenter.copy(center);
+    this.targetCenter.copy(center);
+    this.spherical.radius = LogScale.logDistanceToMeters(logDistance);
+    this.transition.active = false;
     this.autoRotateEnabled = false;
-  }
-
-  returnFromOrreryView(target: THREE.Vector3, zoom: number): void {
-    // Start cinematic transition back to planet
-    this.transition = {
-      active: true,
-      startTime: performance.now(),
-      duration: 2500, // 2.5 seconds
-      startLogDistance: this._logDistance,
-      startPhi: this.spherical.phi,
-      startTheta: this.spherical.theta,
-      startCenter: this.currentCenter.clone(),
-      targetLogDistance: zoom,
-      targetPhi: Math.PI / 2.2, // Equatorial view
-      targetTheta: this.spherical.theta - Math.PI * 0.1, // Slight counter-rotation
-      targetCenter: target.clone(),
-    };
+    this.updateCameraPosition();
   }
 
   setPlanetView(target: THREE.Vector3, zoom: number): void {

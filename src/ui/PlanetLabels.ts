@@ -94,8 +94,8 @@ export class PlanetLabels {
         el.classList.remove('line-visible', 'text-visible');
       });
 
-      // Stage 1: After camera transition completes (~3.5s), draw lines with stagger
-      let lineDelay = 3500;
+      // Stage 1: Draw lines with stagger (short delay, called after fade-in)
+      let lineDelay = 200;
       this.labels.forEach((label) => {
         const el = label.element as HTMLElement;
         setTimeout(() => {
@@ -105,7 +105,7 @@ export class PlanetLabels {
       });
 
       // Stage 2: After lines draw (~0.6s), fade in text with stagger
-      let textDelay = 3500 + 600; // After camera + line animation
+      let textDelay = 200 + 600;
       this.labels.forEach((label) => {
         const el = label.element as HTMLElement;
         setTimeout(() => {

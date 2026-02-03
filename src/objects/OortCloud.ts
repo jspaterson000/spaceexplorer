@@ -10,6 +10,11 @@ export class OortCloud {
   private innerShell: THREE.Mesh;
   private outerShell: THREE.Mesh;
   private particles: THREE.Points;
+  private targetOpacity = 1.0;
+  private currentOpacity = 1.0;
+  private innerShellMaterial: THREE.ShaderMaterial;
+  private outerShellMaterial: THREE.ShaderMaterial;
+  private particlesMaterial: THREE.ShaderMaterial;
 
   // Oort Cloud extends from ~2,000 AU to ~100,000 AU
   // Using sqrt scaling and artistic compression for visibility
@@ -25,28 +30,35 @@ export class OortCloud {
     this.mesh = new THREE.Group();
 
     // Create inner shell (subtle boundary)
-    this.innerShell = this.createShell(OortCloud.INNER_RADIUS, 0x4466aa, 0.08);
+    const innerResult = this.createShell(OortCloud.INNER_RADIUS, 0x4466aa, 0.08);
+    this.innerShell = innerResult.mesh;
+    this.innerShellMaterial = innerResult.material;
     this.mesh.add(this.innerShell);
 
     // Create outer shell (faint edge)
-    this.outerShell = this.createShell(OortCloud.OUTER_RADIUS, 0x334477, 0.05);
+    const outerResult = this.createShell(OortCloud.OUTER_RADIUS, 0x334477, 0.05);
+    this.outerShell = outerResult.mesh;
+    this.outerShellMaterial = outerResult.material;
     this.mesh.add(this.outerShell);
 
     // Create scattered particles to represent icy bodies
-    this.particles = this.createParticles();
+    const particlesResult = this.createParticles();
+    this.particles = particlesResult.mesh;
+    this.particlesMaterial = particlesResult.material;
     this.mesh.add(this.particles);
 
     // Initially hidden (only visible in orrery mode)
     this.mesh.visible = false;
   }
 
-  private createShell(radius: number, color: number, opacity: number): THREE.Mesh {
+  private createShell(radius: number, color: number, opacity: number): { mesh: THREE.Mesh; material: THREE.ShaderMaterial } {
     const geometry = new THREE.SphereGeometry(radius, 64, 32);
 
     const material = new THREE.ShaderMaterial({
       uniforms: {
         color: { value: new THREE.Color(color) },
-        opacity: { value: opacity },
+        baseOpacity: { value: opacity },
+        fadeOpacity: { value: 1.0 },
       },
       vertexShader: `
         varying vec3 vNormal;
@@ -60,7 +72,8 @@ export class OortCloud {
       `,
       fragmentShader: `
         uniform vec3 color;
-        uniform float opacity;
+        uniform float baseOpacity;
+        uniform float fadeOpacity;
         varying vec3 vNormal;
         varying vec3 vPosition;
 
@@ -70,7 +83,7 @@ export class OortCloud {
           float fresnel = 1.0 - abs(dot(viewDir, vNormal));
           fresnel = pow(fresnel, 2.0);
 
-          gl_FragColor = vec4(color, fresnel * opacity);
+          gl_FragColor = vec4(color, fresnel * baseOpacity * fadeOpacity);
         }
       `,
       transparent: true,
@@ -79,10 +92,10 @@ export class OortCloud {
       blending: THREE.AdditiveBlending,
     });
 
-    return new THREE.Mesh(geometry, material);
+    return { mesh: new THREE.Mesh(geometry, material), material };
   }
 
-  private createParticles(): THREE.Points {
+  private createParticles(): { mesh: THREE.Points; material: THREE.ShaderMaterial } {
     const particleCount = 2000;
     const positions = new Float32Array(particleCount * 3);
     const sizes = new Float32Array(particleCount);
@@ -112,6 +125,7 @@ export class OortCloud {
       uniforms: {
         color: { value: new THREE.Color(0x6688bb) },
         scale: { value: 1.0 },
+        fadeOpacity: { value: 1.0 },
       },
       vertexShader: `
         attribute float size;
@@ -132,6 +146,7 @@ export class OortCloud {
       `,
       fragmentShader: `
         uniform vec3 color;
+        uniform float fadeOpacity;
         varying float vAlpha;
 
         void main() {
@@ -140,7 +155,7 @@ export class OortCloud {
           if (dist > 0.5) discard;
 
           float alpha = (1.0 - dist * 2.0) * vAlpha;
-          gl_FragColor = vec4(color, alpha * 0.4);
+          gl_FragColor = vec4(color, alpha * 0.4 * fadeOpacity);
         }
       `,
       transparent: true,
@@ -148,11 +163,46 @@ export class OortCloud {
       blending: THREE.AdditiveBlending,
     });
 
-    return new THREE.Points(geometry, material);
+    return { mesh: new THREE.Points(geometry, material), material };
   }
 
   setVisible(visible: boolean): void {
     this.mesh.visible = visible;
+    if (visible) {
+      this.currentOpacity = 1.0;
+      this.targetOpacity = 1.0;
+      this.updateMaterialOpacity(1.0);
+    }
+  }
+
+  /**
+   * Set target opacity for smooth fade transitions
+   */
+  setOpacity(opacity: number): void {
+    this.targetOpacity = opacity;
+  }
+
+  /**
+   * Update opacity interpolation - call each frame for smooth fades
+   */
+  updateOpacity(damping = 0.08): void {
+    this.currentOpacity += (this.targetOpacity - this.currentOpacity) * damping;
+    this.updateMaterialOpacity(this.currentOpacity);
+  }
+
+  /**
+   * Immediately set opacity without interpolation
+   */
+  setOpacityImmediate(opacity: number): void {
+    this.currentOpacity = opacity;
+    this.targetOpacity = opacity;
+    this.updateMaterialOpacity(opacity);
+  }
+
+  private updateMaterialOpacity(opacity: number): void {
+    this.innerShellMaterial.uniforms.fadeOpacity.value = opacity;
+    this.outerShellMaterial.uniforms.fadeOpacity.value = opacity;
+    this.particlesMaterial.uniforms.fadeOpacity.value = opacity;
   }
 
   addToScene(scene: THREE.Scene): void {

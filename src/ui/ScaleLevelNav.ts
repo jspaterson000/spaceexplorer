@@ -49,6 +49,8 @@ export class ScaleLevelNav {
         return 'Planet';
       case ScaleLevel.SolarSystem:
         return 'System';
+      case ScaleLevel.Stellar:
+        return 'Stellar';
       default:
         return '';
     }

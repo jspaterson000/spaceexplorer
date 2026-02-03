@@ -11,6 +11,7 @@
 </head>
 <body>
   <canvas id="canvas"></canvas>
+  <div id="transition-overlay"></div>
   <div id="title-card">
     <h1 class="title">Earth</h1>
     <div id="body-facts"></div>
@@ -25,6 +26,14 @@
       </div>
     </div>
   </div>
+  <!-- Stellar mode content template (hidden) -->
+  <template id="stellar-facts-template">
+    <div class="fact-row"><span class="fact-label">Radius</span><span class="fact-value">~20 light years</span></div>
+    <div class="fact-row"><span class="fact-label">Stars</span><span class="fact-value">52</span></div>
+    <div class="fact-row"><span class="fact-label">Nearest</span><span class="fact-value">Proxima Centauri (4.24 ly)</span></div>
+    <div class="fact-row"><span class="fact-label">Brightest</span><span class="fact-value">Sirius (8.6 ly)</span></div>
+    <div class="fact-highlight">Our corner of the Milky Way</div>
+  </template>
   <div id="settings-container">
     <button id="settings-btn" class="settings-btn" title="Menu">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
