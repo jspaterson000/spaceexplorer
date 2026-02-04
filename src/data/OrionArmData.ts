@@ -128,4 +128,63 @@ export const ORION_ARM_OBJECTS: OrionArmObject[] = [
   },
 ];
 
+export interface MolecularCloud {
+  name: string;
+  position: [number, number, number]; // galactic cartesian, ly
+  distance: number;
+  extent: number; // approximate diameter in ly
+  color: string; // base color (rendered very faintly)
+  layers: number; // number of overlapping sprite layers for volume
+}
+
+// Major molecular cloud complexes in the Orion Arm
+// These are vast regions of gas and dust — the raw material of star formation
+export const MOLECULAR_CLOUDS: MolecularCloud[] = [
+  {
+    // l=210°, b=-15° — contains Orion Nebula, Barnard's Loop, Horsehead
+    name: 'Orion Molecular Cloud',
+    position: [-1050, -350, -580],
+    distance: 1300,
+    extent: 400,
+    color: '#cc6688',
+    layers: 3,
+  },
+  {
+    // l=264°, b=-2° — vast region around Vela/Gum, multiple ridges
+    name: 'Vela Molecular Ridge',
+    position: [-190, -70, -1990],
+    distance: 2000,
+    extent: 500,
+    color: '#8866aa',
+    layers: 3,
+  },
+  {
+    // l=80°, b=+1° — one of the richest star-forming complexes in the Galaxy
+    name: 'Cygnus X',
+    position: [780, 79, 4430],
+    distance: 4500,
+    extent: 600,
+    color: '#5577bb',
+    layers: 4,
+  },
+  {
+    // l=205°, b=-1° — host of the Rosette Nebula
+    name: 'Monoceros Cloud',
+    position: [-2270, -44, -1060],
+    distance: 2500,
+    extent: 350,
+    color: '#aa4466',
+    layers: 2,
+  },
+  {
+    // l=103°, b=+5° — massive cloud complex in Cepheus
+    name: 'Cepheus Cloud',
+    position: [-270, 105, 1170],
+    distance: 1200,
+    extent: 300,
+    color: '#667799',
+    layers: 2,
+  },
+];
+
 export const ORION_ARM_SCALE_FACTOR = 1e12;

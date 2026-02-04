@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import {
   ORION_ARM_OBJECTS,
   ORION_ARM_SCALE_FACTOR,
+  MOLECULAR_CLOUDS,
   type OrionArmObject,
 } from '../data/OrionArmData';
 
@@ -25,16 +26,27 @@ function randomGaussian(): number {
   return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
 }
 
+/** Seeded pseudo-random for deterministic cloud textures. */
+function seededRandom(seed: number): () => number {
+  let s = seed;
+  return () => {
+    s = (s * 16807 + 0) % 2147483647;
+    return s / 2147483647;
+  };
+}
+
 /**
- * Visual representation of the Orion Arm — nebulae as glowing sprites
- * and ambient star field as point clouds.
+ * Visual representation of the Orion Arm — nebulae as glowing sprites,
+ * molecular gas clouds as layered wispy volumes, and ambient star field.
  */
 export class OrionArm {
   readonly mesh: THREE.Group;
   private sprites: THREE.Sprite[] = [];
+  private cloudSprites: THREE.Sprite[] = [];
   private starPoints: THREE.Points;
   private starMaterial: THREE.ShaderMaterial;
   private spriteMaterials: THREE.SpriteMaterial[] = [];
+  private cloudMaterials: THREE.SpriteMaterial[] = [];
   private targetOpacity = 1.0;
   private currentOpacity = 1.0;
 
@@ -42,6 +54,9 @@ export class OrionArm {
 
   constructor() {
     this.mesh = new THREE.Group();
+
+    // Create gas clouds first (behind everything)
+    this.createMolecularClouds();
 
     // Create nebula sprites
     this.createNebulaSprites();
@@ -67,7 +82,114 @@ export class OrionArm {
     );
   }
 
-  private createNebulaTexture(color: string, size: number): THREE.Texture {
+  // --- Cloud texture generation ---
+
+  /**
+   * Creates an organic, wispy cloud texture using layered radial gradients
+   * with randomized offsets to break symmetry.
+   */
+  private createCloudTexture(color: string, seed: number): THREE.Texture {
+    const canvas = document.createElement('canvas');
+    const res = 256;
+    canvas.width = res;
+    canvas.height = res;
+    const ctx = canvas.getContext('2d')!;
+
+    const rand = seededRandom(seed);
+    const cx = res / 2;
+    const cy = res / 2;
+
+    // Layer multiple offset radial gradients for organic look
+    const blobCount = 4 + Math.floor(rand() * 3);
+    for (let i = 0; i < blobCount; i++) {
+      const ox = cx + (rand() - 0.5) * res * 0.4;
+      const oy = cy + (rand() - 0.5) * res * 0.4;
+      const r = res * (0.25 + rand() * 0.3);
+
+      const gradient = ctx.createRadialGradient(ox, oy, 0, ox, oy, r);
+      const alpha = 0.06 + rand() * 0.06;
+      gradient.addColorStop(0, color + this.alphaHex(alpha * 1.5));
+      gradient.addColorStop(0.3, color + this.alphaHex(alpha));
+      gradient.addColorStop(0.7, color + this.alphaHex(alpha * 0.3));
+      gradient.addColorStop(1, color + '00');
+
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, res, res);
+    }
+
+    // Soft outer vignette to fade edges
+    const vignette = ctx.createRadialGradient(cx, cy, res * 0.2, cx, cy, res * 0.5);
+    vignette.addColorStop(0, 'rgba(0,0,0,0)');
+    vignette.addColorStop(1, 'rgba(0,0,0,1)');
+    ctx.globalCompositeOperation = 'destination-in';
+
+    // Use an elliptical clip for non-circular shape
+    ctx.save();
+    ctx.beginPath();
+    const scaleX = 0.8 + rand() * 0.4;
+    const scaleY = 0.8 + rand() * 0.4;
+    ctx.translate(cx, cy);
+    ctx.scale(scaleX, scaleY);
+    ctx.arc(0, 0, res * 0.5, 0, Math.PI * 2);
+    ctx.restore();
+    ctx.fillStyle = vignette;
+    ctx.fill();
+
+    ctx.globalCompositeOperation = 'source-over';
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+    return texture;
+  }
+
+  /** Convert a 0-1 alpha to a 2-char hex string. */
+  private alphaHex(a: number): string {
+    const clamped = Math.max(0, Math.min(1, a));
+    return Math.round(clamped * 255).toString(16).padStart(2, '0');
+  }
+
+  private createMolecularClouds(): void {
+    for (const cloud of MOLECULAR_CLOUDS) {
+      const center = OrionArm.scalePosition(cloud.position);
+      const baseScale = Math.sqrt(cloud.extent) * OrionArm.SF * 0.6;
+
+      for (let i = 0; i < cloud.layers; i++) {
+        const texture = this.createCloudTexture(cloud.color, i * 1000 + cloud.distance);
+        const material = new THREE.SpriteMaterial({
+          map: texture,
+          transparent: true,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+          opacity: 0.35,
+        });
+
+        const sprite = new THREE.Sprite(material);
+
+        // Offset each layer slightly for volume
+        const offset = new THREE.Vector3(
+          (Math.random() - 0.5) * baseScale * 0.3,
+          (Math.random() - 0.5) * baseScale * 0.1,
+          (Math.random() - 0.5) * baseScale * 0.3,
+        );
+        sprite.position.copy(center).add(offset);
+
+        // Vary scale per layer
+        const layerScale = baseScale * (0.8 + Math.random() * 0.5);
+        sprite.scale.set(layerScale, layerScale * (0.5 + Math.random() * 0.3), 1);
+
+        // Random initial rotation
+        sprite.material.rotation = Math.random() * Math.PI * 2;
+
+        this.mesh.add(sprite);
+        this.cloudSprites.push(sprite);
+        this.cloudMaterials.push(material);
+      }
+    }
+  }
+
+  // --- Nebula texture ---
+
+  private createNebulaTexture(color: string): THREE.Texture {
     const canvas = document.createElement('canvas');
     const res = 128;
     canvas.width = res;
@@ -78,7 +200,6 @@ export class OrionArm {
     const cy = res / 2;
     const r = res / 2;
 
-    // Radial gradient: color center → transparent edge
     const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
     gradient.addColorStop(0, color);
     gradient.addColorStop(0.2, color + 'cc');
@@ -97,7 +218,7 @@ export class OrionArm {
     for (const obj of ORION_ARM_OBJECTS) {
       if (obj.type === 'marker') continue;
 
-      const texture = this.createNebulaTexture(obj.color, obj.radius);
+      const texture = this.createNebulaTexture(obj.color);
       const material = new THREE.SpriteMaterial({
         map: texture,
         transparent: true,
@@ -110,7 +231,6 @@ export class OrionArm {
       const pos = OrionArm.scalePosition(obj.position);
       sprite.position.copy(pos);
 
-      // Scale based on radius — sqrt compression on the radius too
       const spriteScale = Math.sqrt(obj.radius) * OrionArm.SF * 0.3;
       sprite.scale.set(spriteScale, spriteScale, 1);
 
@@ -120,9 +240,10 @@ export class OrionArm {
     }
   }
 
+  // --- Star field ---
+
   private createStarField(): { mesh: THREE.Points; material: THREE.ShaderMaterial } {
     const starCount = 600;
-    // Add one extra point for the Local Bubble marker
     const totalPoints = starCount + 1;
     const positions = new Float32Array(totalPoints * 3);
     const colors = new Float32Array(totalPoints * 3);
@@ -141,20 +262,16 @@ export class OrionArm {
     sizes[0] = 4.0;
     idx = 1;
 
-    // Distribute ambient stars in a natural spherical falloff
-    // Use Gaussian-like distribution: dense near center, fading at edges
-    const scaleRadius = 6000; // ly — characteristic radius
+    const scaleRadius = 6000;
     for (let i = 0; i < starCount; i++) {
-      // Spherical coordinates with Gaussian radial falloff
       const u = Math.random();
       const v = Math.random();
       const theta = 2 * Math.PI * u;
       const phi = Math.acos(2 * v - 1);
-      // Box-Muller-ish radial distribution: denser near center, tails off
       const r = scaleRadius * Math.abs(randomGaussian()) * 0.8;
 
       const x = r * Math.sin(phi) * Math.cos(theta);
-      const y = r * Math.cos(phi) * 0.15; // Flatten to galactic plane
+      const y = r * Math.cos(phi) * 0.15;
       const z = r * Math.sin(phi) * Math.sin(theta);
 
       const pos = OrionArm.scalePosition([x, y, z]);
@@ -162,7 +279,6 @@ export class OrionArm {
       positions[idx * 3 + 1] = pos.y;
       positions[idx * 3 + 2] = pos.z;
 
-      // Random spectral type
       let rand = Math.random();
       let spectral = 'G';
       let cumulative = 0;
@@ -265,8 +381,12 @@ export class OrionArm {
     this.updateAllOpacities(this.currentOpacity);
   }
 
-  update(_time: number): void {
-    // Reserved for future animations (e.g., subtle nebula pulsing)
+  update(time: number): void {
+    // Subtle slow rotation on cloud layers for living, breathing feel
+    const t = time * 0.00003;
+    for (let i = 0; i < this.cloudSprites.length; i++) {
+      this.cloudSprites[i].material.rotation += (i % 2 === 0 ? 1 : -1) * 0.00002;
+    }
   }
 
   addToScene(scene: THREE.Scene): void {
@@ -287,6 +407,9 @@ export class OrionArm {
     this.starMaterial.uniforms.opacity.value = opacity;
     for (const mat of this.spriteMaterials) {
       mat.opacity = opacity;
+    }
+    for (const mat of this.cloudMaterials) {
+      mat.opacity = 0.35 * opacity;
     }
   }
 }
