@@ -198,6 +198,13 @@ function updateTitleCardForLevel(level: ScaleLevel): void {
       factsElement.innerHTML = stellarFactsTemplate.innerHTML;
     }
     statsElement.classList.add('hidden');
+  } else if (level === ScaleLevel.LocalBubble) {
+    titleElement.textContent = 'Local Bubble';
+    const localBubbleFactsTemplate = document.getElementById('local-bubble-facts-template') as HTMLTemplateElement;
+    if (localBubbleFactsTemplate) {
+      factsElement.innerHTML = localBubbleFactsTemplate.innerHTML;
+    }
+    statsElement.classList.add('hidden');
   }
 }
 
