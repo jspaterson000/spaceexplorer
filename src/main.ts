@@ -28,6 +28,8 @@ import { ORBITAL_ELEMENTS } from './objects/planets/PlanetData';
 import { Stars } from './objects/Stars';
 import { StarLabels } from './ui/StarLabels';
 import { getStarColor } from './data/NearbyStars';
+import { LocalBubble } from './objects/LocalBubble';
+import { LocalBubbleLabels } from './ui/LocalBubbleLabels';
 
 const canvas = document.getElementById('canvas') as HTMLCanvasElement;
 const renderer = new Renderer({ canvas });
@@ -136,6 +138,21 @@ stars.getStars().forEach((star, index) => {
   const position = stars.getStarPosition(index);
   const color = getStarColor(star.spectralType);
   starLabels.addLabel(star, position, color, star.notable);
+});
+
+// Local Bubble (visible in local bubble mode)
+const localBubble = new LocalBubble();
+localBubble.addToScene(scene);
+
+// Local Bubble labels
+const localBubbleLabels = new LocalBubbleLabels(document.body, scene);
+
+// Add labels for all clusters
+localBubble.getClusters().forEach((cluster, index) => {
+  const position = localBubble.getClusterPosition(index);
+  // Use a blue-violet color for cluster labels
+  const color = cluster.type === 'marker' ? '#ffee88' : '#6677cc';
+  localBubbleLabels.addLabel(cluster, position, color, cluster.notable);
 });
 
 // Navigation
@@ -255,6 +272,7 @@ scaleLevelNav.setOnLevelChange((level) => {
   const isOrrery = level === ScaleLevel.SolarSystem;
   const isStellar = level === ScaleLevel.Stellar;
   const isPlanet = level === ScaleLevel.Planet;
+  const isLocalBubble = level === ScaleLevel.LocalBubble;
 
   fadeTransition(
     // Setup: swap everything while screen is black
@@ -263,17 +281,17 @@ scaleLevelNav.setOnLevelChange((level) => {
       visualScaleLevel = level;
 
       // Set orrery mode on Sun (moves to origin, scales up)
-      sun.setOrreryMode(isOrrery || isStellar);
+      sun.setOrreryMode(isOrrery || isStellar || isLocalBubble);
 
       // Set orrery mode on all planets
-      earth.setOrreryMode(isOrrery || isStellar);
-      mercury.setOrreryMode(isOrrery || isStellar);
-      venus.setOrreryMode(isOrrery || isStellar);
-      mars.setOrreryMode(isOrrery || isStellar);
-      jupiter.setOrreryMode(isOrrery || isStellar);
-      saturn.setOrreryMode(isOrrery || isStellar);
-      uranus.setOrreryMode(isOrrery || isStellar);
-      neptune.setOrreryMode(isOrrery || isStellar);
+      earth.setOrreryMode(isOrrery || isStellar || isLocalBubble);
+      mercury.setOrreryMode(isOrrery || isStellar || isLocalBubble);
+      venus.setOrreryMode(isOrrery || isStellar || isLocalBubble);
+      mars.setOrreryMode(isOrrery || isStellar || isLocalBubble);
+      jupiter.setOrreryMode(isOrrery || isStellar || isLocalBubble);
+      saturn.setOrreryMode(isOrrery || isStellar || isLocalBubble);
+      uranus.setOrreryMode(isOrrery || isStellar || isLocalBubble);
+      neptune.setOrreryMode(isOrrery || isStellar || isLocalBubble);
 
       // Update title card
       updateTitleCardForLevel(level);
@@ -312,6 +330,10 @@ scaleLevelNav.setOnLevelChange((level) => {
         stars.setVisible(false);
         starLabels.setVisible(false);
 
+        // Hide local bubble elements
+        localBubble.setVisible(false);
+        localBubbleLabels.setVisible(false);
+
         // Show journey dock, time controls
         journeyDock.style.display = '';
         timeControls.show();
@@ -342,6 +364,10 @@ scaleLevelNav.setOnLevelChange((level) => {
         orbitalPaths.forEach(({ path }) => path.setVisible(false));
         oortCloud.setVisible(false);
         planetLabels.setVisible(false);
+
+        // Hide local bubble elements
+        localBubble.setVisible(false);
+        localBubbleLabels.setVisible(false);
 
         // Show stars at full opacity
         stars.setVisible(true);
@@ -391,10 +417,57 @@ scaleLevelNav.setOnLevelChange((level) => {
         oortCloud.setVisible(false);
         planetLabels.setVisible(false);
 
+        // Hide local bubble elements
+        localBubble.setVisible(false);
+        localBubbleLabels.setVisible(false);
+
         // Show journey dock, hide time controls
         journeyDock.style.display = '';
         timeControls.hide();
         simulatedTime.reset();
+      } else if (isLocalBubble) {
+        // ========================================
+        // Stellar → Local Bubble
+        // ========================================
+        orbitCamera.setPositionImmediate(12.5, Math.PI / 3, new THREE.Vector3(0, 0, 0));
+
+        // Hide all solar system objects
+        earth.mesh.visible = false;
+        earth.atmosphere.visible = false;
+        mercury.mesh.visible = false;
+        venus.mesh.visible = false;
+        mars.mesh.visible = false;
+        jupiter.mesh.visible = false;
+        saturn.mesh.visible = false;
+        uranus.mesh.visible = false;
+        neptune.mesh.visible = false;
+        moon.mesh.visible = false;
+        satellites.mesh.visible = false;
+        sun.mesh.visible = false;
+        sun.hideFlares();
+
+        // Hide solar system overlays
+        orbitalPaths.forEach(({ path }) => path.setVisible(false));
+        oortCloud.setVisible(false);
+        planetLabels.setVisible(false);
+
+        // Hide stellar elements
+        stars.setVisible(false);
+        starLabels.setVisible(false);
+
+        // Show Local Bubble
+        localBubble.setVisible(true);
+        localBubble.setOpacityImmediate(1);
+
+        // Hide journey dock and time controls
+        journeyDock.style.display = 'none';
+        timeControls.hide();
+
+        // Enable auto-rotation
+        orbitCamera.setAutoRotate(true);
+
+        // Zoom out during fade-in
+        orbitCamera.animateZoomTo(13.0);
       }
     },
     // After reveal: label entrance animations
@@ -408,6 +481,11 @@ scaleLevelNav.setOnLevelChange((level) => {
         }, 3000);
       } else if (isPlanet) {
         navigation.refreshTitleCard();
+      } else if (isLocalBubble) {
+        // Show local bubble labels after zoom completes
+        setTimeout(() => {
+          localBubbleLabels.setVisible(true);
+        }, 3000);
       }
     }
   );
@@ -765,6 +843,10 @@ function animate() {
   orbitalPaths.forEach(({ path }) => path.updateOpacity(0.06));
   oortCloud.updateOpacity(0.06);
 
+  // Update Local Bubble animations and opacity
+  localBubble.update(time);
+  localBubble.updateOpacity(0.06);
+
   // Request satellite positions with real time
   worker.requestPositions(Date.now());
 
@@ -776,6 +858,9 @@ function animate() {
 
   // Render star labels (stellar mode)
   starLabels.render(orbitCamera.camera);
+
+  // Render local bubble labels
+  localBubbleLabels.render(orbitCamera.camera);
 
   updateStats();
 }
