@@ -51,6 +51,8 @@ export class ScaleLevelNav {
         return 'System';
       case ScaleLevel.Stellar:
         return 'Stellar';
+      case ScaleLevel.LocalBubble:
+        return 'Bubble';
       default:
         return '';
     }
