@@ -1227,3 +1227,69 @@ html, body {
   color: rgba(180, 190, 200, 0.6);
   margin-top: 2px;
 }
+
+/* Milky Way labels */
+.milky-way-label {
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.milky-way-label-content {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  transform: translateX(-6px);
+}
+
+.milky-way-label-line {
+  width: 0;
+  height: 1px;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.5);
+  transition: width 0.5s ease-out;
+}
+
+.milky-way-label.line-visible .milky-way-label-line {
+  width: 25px;
+}
+
+.milky-way-label-text {
+  display: flex;
+  flex-direction: column;
+  margin-right: 6px;
+  opacity: 0;
+  transform: translateX(-5px);
+  transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+}
+
+.milky-way-label.text-visible .milky-way-label-text {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.milky-way-label.hover-visible .milky-way-label-line {
+  width: 25px;
+  transition: none;
+}
+
+.milky-way-label.hover-visible .milky-way-label-text {
+  opacity: 1;
+  transform: translateX(0);
+  transition: none;
+}
+
+.milky-way-label-name {
+  font-family: 'Playfair Display', serif;
+  font-size: 11px;
+  font-weight: 400;
+  color: rgba(230, 237, 243, 0.9);
+  letter-spacing: 0.3px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.milky-way-label-desc {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  color: rgba(180, 190, 200, 0.6);
+  margin-top: 2px;
+}

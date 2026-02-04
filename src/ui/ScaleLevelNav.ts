@@ -55,6 +55,8 @@ export class ScaleLevelNav {
         return 'Bubble';
       case ScaleLevel.OrionArm:
         return 'Orion';
+      case ScaleLevel.MilkyWay:
+        return 'Galaxy';
       default:
         return '';
     }

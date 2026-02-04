@@ -4,9 +4,10 @@ export enum ScaleLevel {
   Stellar = 'stellar',
   LocalBubble = 'local-bubble',
   OrionArm = 'orion-arm',
+  MilkyWay = 'milky-way',
 }
 
-const LEVELS = [ScaleLevel.Planet, ScaleLevel.SolarSystem, ScaleLevel.Stellar, ScaleLevel.LocalBubble, ScaleLevel.OrionArm];
+const LEVELS = [ScaleLevel.Planet, ScaleLevel.SolarSystem, ScaleLevel.Stellar, ScaleLevel.LocalBubble, ScaleLevel.OrionArm, ScaleLevel.MilkyWay];
 
 export class ScaleLevelState {
   private _current: ScaleLevel = ScaleLevel.Planet;
@@ -62,5 +63,9 @@ export class ScaleLevelState {
 
   isOrionArmMode(): boolean {
     return this._current === ScaleLevel.OrionArm;
+  }
+
+  isMilkyWayMode(): boolean {
+    return this._current === ScaleLevel.MilkyWay;
   }
 }

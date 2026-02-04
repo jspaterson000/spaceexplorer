@@ -32,6 +32,8 @@ import { LocalBubble } from './objects/LocalBubble';
 import { LocalBubbleLabels } from './ui/LocalBubbleLabels';
 import { OrionArm } from './objects/OrionArm';
 import { OrionArmLabels } from './ui/OrionArmLabels';
+import { MilkyWay } from './objects/MilkyWay';
+import { MilkyWayLabels } from './ui/MilkyWayLabels';
 
 const canvas = document.getElementById('canvas') as HTMLCanvasElement;
 const renderer = new Renderer({ canvas });
@@ -171,6 +173,25 @@ orionArm.getObjects().forEach((obj, index) => {
   orionArmLabels.addLabel(obj, position, color, obj.notable);
 });
 
+// Milky Way (visible in milky way mode)
+const milkyWay = new MilkyWay();
+milkyWay.addToScene(scene);
+
+// Milky Way labels
+const milkyWayLabels = new MilkyWayLabels(document.body, scene);
+
+// Add labels for spiral arms
+milkyWay.getArms().forEach((arm) => {
+  const position = milkyWay.getArmLabelPosition(arm);
+  milkyWayLabels.addLabel(arm, position, arm.color, arm.notable);
+});
+
+// Add labels for galactic features
+milkyWay.getFeatures().forEach((feature) => {
+  const position = milkyWay.getFeaturePosition(feature);
+  milkyWayLabels.addLabel(feature, position, feature.color, feature.notable);
+});
+
 // Navigation
 const navigation = new Navigation(orbitCamera);
 
@@ -245,6 +266,13 @@ function updateTitleCardForLevel(level: ScaleLevel): void {
       factsElement.innerHTML = orionArmFactsTemplate.innerHTML;
     }
     statsElement.classList.add('hidden');
+  } else if (level === ScaleLevel.MilkyWay) {
+    titleElement.textContent = 'Milky Way';
+    const milkyWayFactsTemplate = document.getElementById('milky-way-facts-template') as HTMLTemplateElement;
+    if (milkyWayFactsTemplate) {
+      factsElement.innerHTML = milkyWayFactsTemplate.innerHTML;
+    }
+    statsElement.classList.add('hidden');
   }
 }
 
@@ -297,6 +325,7 @@ scaleLevelNav.setOnLevelChange((level) => {
   const isPlanet = level === ScaleLevel.Planet;
   const isLocalBubble = level === ScaleLevel.LocalBubble;
   const isOrionArm = level === ScaleLevel.OrionArm;
+  const isMilkyWay = level === ScaleLevel.MilkyWay;
 
   fadeTransition(
     // Setup: swap everything while screen is black
@@ -305,17 +334,17 @@ scaleLevelNav.setOnLevelChange((level) => {
       visualScaleLevel = level;
 
       // Set orrery mode on Sun (moves to origin, scales up)
-      sun.setOrreryMode(isOrrery || isStellar || isLocalBubble || isOrionArm);
+      sun.setOrreryMode(isOrrery || isStellar || isLocalBubble || isOrionArm || isMilkyWay);
 
       // Set orrery mode on all planets
-      earth.setOrreryMode(isOrrery || isStellar || isLocalBubble || isOrionArm);
-      mercury.setOrreryMode(isOrrery || isStellar || isLocalBubble || isOrionArm);
-      venus.setOrreryMode(isOrrery || isStellar || isLocalBubble || isOrionArm);
-      mars.setOrreryMode(isOrrery || isStellar || isLocalBubble || isOrionArm);
-      jupiter.setOrreryMode(isOrrery || isStellar || isLocalBubble || isOrionArm);
-      saturn.setOrreryMode(isOrrery || isStellar || isLocalBubble || isOrionArm);
-      uranus.setOrreryMode(isOrrery || isStellar || isLocalBubble || isOrionArm);
-      neptune.setOrreryMode(isOrrery || isStellar || isLocalBubble || isOrionArm);
+      earth.setOrreryMode(isOrrery || isStellar || isLocalBubble || isOrionArm || isMilkyWay);
+      mercury.setOrreryMode(isOrrery || isStellar || isLocalBubble || isOrionArm || isMilkyWay);
+      venus.setOrreryMode(isOrrery || isStellar || isLocalBubble || isOrionArm || isMilkyWay);
+      mars.setOrreryMode(isOrrery || isStellar || isLocalBubble || isOrionArm || isMilkyWay);
+      jupiter.setOrreryMode(isOrrery || isStellar || isLocalBubble || isOrionArm || isMilkyWay);
+      saturn.setOrreryMode(isOrrery || isStellar || isLocalBubble || isOrionArm || isMilkyWay);
+      uranus.setOrreryMode(isOrrery || isStellar || isLocalBubble || isOrionArm || isMilkyWay);
+      neptune.setOrreryMode(isOrrery || isStellar || isLocalBubble || isOrionArm || isMilkyWay);
 
       // Update title card
       updateTitleCardForLevel(level);
@@ -362,6 +391,10 @@ scaleLevelNav.setOnLevelChange((level) => {
         orionArm.setVisible(false);
         orionArmLabels.setVisible(false);
 
+        // Hide milky way elements
+        milkyWay.setVisible(false);
+        milkyWayLabels.setVisible(false);
+
         // Show journey dock, time controls
         journeyDock.style.display = '';
         timeControls.show();
@@ -400,6 +433,10 @@ scaleLevelNav.setOnLevelChange((level) => {
         // Hide orion arm elements
         orionArm.setVisible(false);
         orionArmLabels.setVisible(false);
+
+        // Hide milky way elements
+        milkyWay.setVisible(false);
+        milkyWayLabels.setVisible(false);
 
         // Show stars at full opacity
         stars.setVisible(true);
@@ -457,6 +494,10 @@ scaleLevelNav.setOnLevelChange((level) => {
         orionArm.setVisible(false);
         orionArmLabels.setVisible(false);
 
+        // Hide milky way elements
+        milkyWay.setVisible(false);
+        milkyWayLabels.setVisible(false);
+
         // Show journey dock, hide time controls
         journeyDock.style.display = '';
         timeControls.hide();
@@ -498,6 +539,10 @@ scaleLevelNav.setOnLevelChange((level) => {
         // Hide orion arm elements
         orionArm.setVisible(false);
         orionArmLabels.setVisible(false);
+
+        // Hide milky way elements
+        milkyWay.setVisible(false);
+        milkyWayLabels.setVisible(false);
 
         // Hide journey dock and time controls
         journeyDock.style.display = 'none';
@@ -555,6 +600,58 @@ scaleLevelNav.setOnLevelChange((level) => {
 
         // Zoom out during fade-in
         orbitCamera.animateZoomTo(14.0);
+      } else if (isMilkyWay) {
+        // ========================================
+        // Orion Arm → Milky Way
+        // ========================================
+        // Top-down view: phi near 0 looks straight down onto the galactic plane
+        orbitCamera.setPositionImmediate(14.5, 0.3, new THREE.Vector3(0, 0, 0));
+
+        // Hide all solar system objects
+        earth.mesh.visible = false;
+        earth.atmosphere.visible = false;
+        mercury.mesh.visible = false;
+        venus.mesh.visible = false;
+        mars.mesh.visible = false;
+        jupiter.mesh.visible = false;
+        saturn.mesh.visible = false;
+        uranus.mesh.visible = false;
+        neptune.mesh.visible = false;
+        moon.mesh.visible = false;
+        satellites.mesh.visible = false;
+        sun.mesh.visible = false;
+        sun.hideFlares();
+
+        // Hide solar system overlays
+        orbitalPaths.forEach(({ path }) => path.setVisible(false));
+        oortCloud.setVisible(false);
+        planetLabels.setVisible(false);
+
+        // Hide stellar elements
+        stars.setVisible(false);
+        starLabels.setVisible(false);
+
+        // Hide local bubble elements
+        localBubble.setVisible(false);
+        localBubbleLabels.setVisible(false);
+
+        // Hide orion arm elements
+        orionArm.setVisible(false);
+        orionArmLabels.setVisible(false);
+
+        // Show Milky Way
+        milkyWay.setVisible(true);
+        milkyWay.setOpacityImmediate(1);
+
+        // Hide journey dock and time controls
+        journeyDock.style.display = 'none';
+        timeControls.hide();
+
+        // Enable auto-rotation
+        orbitCamera.setAutoRotate(true);
+
+        // Zoom out during fade-in
+        orbitCamera.animateZoomTo(15.0);
       }
     },
     // After reveal: label entrance animations
@@ -577,6 +674,11 @@ scaleLevelNav.setOnLevelChange((level) => {
         // Show orion arm labels after zoom completes
         setTimeout(() => {
           orionArmLabels.setVisible(true);
+        }, 3000);
+      } else if (isMilkyWay) {
+        // Show milky way labels after zoom completes
+        setTimeout(() => {
+          milkyWayLabels.setVisible(true);
         }, 3000);
       }
     }
@@ -943,6 +1045,10 @@ function animate() {
   orionArm.update(time);
   orionArm.updateOpacity(0.06);
 
+  // Update Milky Way animations and opacity
+  milkyWay.update(time);
+  milkyWay.updateOpacity(0.06);
+
   // Request satellite positions with real time
   worker.requestPositions(Date.now());
 
@@ -960,6 +1066,9 @@ function animate() {
 
   // Render orion arm labels
   orionArmLabels.render(orbitCamera.camera);
+
+  // Render milky way labels
+  milkyWayLabels.render(orbitCamera.camera);
 
   updateStats();
 }

@@ -64,12 +64,24 @@ describe('ScaleLevel', () => {
     expect(state.current).toBe(ScaleLevel.OrionArm);
   });
 
-  it('cannot go up from orion arm (top level)', () => {
+  it('can go up from orion arm to milky way', () => {
     const state = new ScaleLevelState();
     state.goUp(); // Planet -> SolarSystem
     state.goUp(); // SolarSystem -> Stellar
     state.goUp(); // Stellar -> LocalBubble
     state.goUp(); // LocalBubble -> OrionArm
+    expect(state.canGoUp()).toBe(true);
+    state.goUp(); // OrionArm -> MilkyWay
+    expect(state.current).toBe(ScaleLevel.MilkyWay);
+  });
+
+  it('cannot go up from milky way (top level)', () => {
+    const state = new ScaleLevelState();
+    state.goUp(); // Planet -> SolarSystem
+    state.goUp(); // SolarSystem -> Stellar
+    state.goUp(); // Stellar -> LocalBubble
+    state.goUp(); // LocalBubble -> OrionArm
+    state.goUp(); // OrionArm -> MilkyWay
     expect(state.canGoUp()).toBe(false);
   });
 
