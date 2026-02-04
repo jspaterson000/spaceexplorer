@@ -11,8 +11,11 @@ export interface OrionArmObject {
   description: string;
 }
 
-// Notable nebulae, remnants, and associations within ~10,000 ly
-// Positions in galactic cartesian coordinates (x=toward galactic center, y=galactic north, z=toward galactic rotation)
+// Notable nebulae, remnants, and associations in the Orion Arm
+// Positions derived from real galactic coordinates (l, b, distance):
+//   x = d·cos(b)·cos(l)  (toward galactic center)
+//   y = d·sin(b)          (galactic north)
+//   z = d·cos(b)·sin(l)   (direction of galactic rotation)
 export const ORION_ARM_OBJECTS: OrionArmObject[] = [
   {
     name: 'Local Bubble',
@@ -25,18 +28,20 @@ export const ORION_ARM_OBJECTS: OrionArmObject[] = [
     description: 'You are here',
   },
   {
+    // l=264°, b=-3°
     name: 'Vela Supernova Remnant',
-    position: [-400, -50, 680],
+    position: [-84, -42, -794],
     distance: 800,
     type: 'supernova remnant',
-    radius: 4,
+    radius: 8,
     color: '#66ddee',
     notable: true,
     description: 'Supernova remnant · 800 ly',
   },
   {
+    // l=209°, b=-19°
     name: 'Orion Nebula',
-    position: [-750, -300, -1050],
+    position: [-1116, -440, -619],
     distance: 1350,
     type: 'emission nebula',
     radius: 12,
@@ -45,18 +50,42 @@ export const ORION_ARM_OBJECTS: OrionArmObject[] = [
     description: 'Emission nebula · 1,350 ly',
   },
   {
+    // l=264°, b=-5° — enormous shell encompassing Vela SNR
     name: 'Gum Nebula',
-    position: [-600, -100, 1330],
+    position: [-156, -131, -1485],
     distance: 1500,
     type: 'emission nebula',
-    radius: 18,
+    radius: 36,
     color: '#ff8899',
     notable: false,
     description: 'Emission nebula · 1,500 ly',
   },
   {
+    // l=74°, b=-9° — the Veil Nebula complex
+    name: 'Cygnus Loop',
+    position: [653, -375, 2279],
+    distance: 2400,
+    type: 'supernova remnant',
+    radius: 8,
+    color: '#44bbcc',
+    notable: true,
+    description: 'Supernova remnant · 2,400 ly',
+  },
+  {
+    // l=99°, b=+4° — Elephant Trunk Nebula region
+    name: 'IC 1396',
+    position: [-374, 167, 2365],
+    distance: 2400,
+    type: 'star-forming region',
+    radius: 20,
+    color: '#ee6644',
+    notable: false,
+    description: 'Star-forming region · 2,400 ly',
+  },
+  {
+    // l=85°, b=-1°
     name: 'North America Nebula',
-    position: [1200, 400, 2220],
+    position: [227, -45, 2589],
     distance: 2600,
     type: 'emission nebula',
     radius: 25,
@@ -65,64 +94,37 @@ export const ORION_ARM_OBJECTS: OrionArmObject[] = [
     description: 'Emission nebula · 2,600 ly',
   },
   {
-    name: 'Lagoon Nebula',
-    position: [-2500, -800, -3000],
-    distance: 4100,
-    type: 'star-forming region',
-    radius: 27,
-    color: '#ff5577',
-    notable: true,
-    description: 'Star-forming region · 4,100 ly',
+    // l=94°, b=-5° — reflection/emission nebula in Cygnus
+    name: 'Cocoon Nebula',
+    position: [-229, -288, 3279],
+    distance: 3300,
+    type: 'emission nebula',
+    radius: 7,
+    color: '#dd6655',
+    notable: false,
+    description: 'Emission nebula · 3,300 ly',
   },
   {
+    // l=206°, b=-2°
     name: 'Rosette Nebula',
-    position: [2800, 200, -4250],
+    position: [-4670, -181, -2278],
     distance: 5200,
     type: 'emission nebula',
     radius: 32,
     color: '#cc3355',
-    notable: false,
+    notable: true,
     description: 'Emission nebula · 5,200 ly',
   },
   {
+    // l=80°, b=+1° — one of the most massive OB associations known
     name: 'Cygnus OB2',
-    position: [2000, 800, 4900],
+    position: [955, 96, 5416],
     distance: 5500,
     type: 'ob association',
     radius: 15,
     color: '#8899ff',
     notable: true,
     description: 'OB association · 5,500 ly',
-  },
-  {
-    name: 'Crab Nebula',
-    position: [3500, 200, -5480],
-    distance: 6500,
-    type: 'supernova remnant',
-    radius: 5.5,
-    color: '#aabbff',
-    notable: true,
-    description: 'Supernova remnant · 6,500 ly',
-  },
-  {
-    name: 'Eagle Nebula',
-    position: [-4000, -600, 5600],
-    distance: 7000,
-    type: 'star-forming region',
-    radius: 35,
-    color: '#aacc44',
-    notable: true,
-    description: 'Star-forming region · 7,000 ly',
-  },
-  {
-    name: 'Carina Nebula',
-    position: [-4500, -1500, 6800],
-    distance: 8500,
-    type: 'star-forming region',
-    radius: 115,
-    color: '#ff8855',
-    notable: true,
-    description: 'Star-forming region · 8,500 ly',
   },
 ];
 
