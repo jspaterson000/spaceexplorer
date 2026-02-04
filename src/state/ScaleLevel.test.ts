@@ -54,11 +54,22 @@ describe('ScaleLevel', () => {
     expect(state.current).toBe(ScaleLevel.LocalBubble);
   });
 
-  it('cannot go up from local bubble (top level)', () => {
+  it('can go up from local bubble to orion arm', () => {
     const state = new ScaleLevelState();
     state.goUp(); // Planet -> SolarSystem
     state.goUp(); // SolarSystem -> Stellar
     state.goUp(); // Stellar -> LocalBubble
+    expect(state.canGoUp()).toBe(true);
+    state.goUp(); // LocalBubble -> OrionArm
+    expect(state.current).toBe(ScaleLevel.OrionArm);
+  });
+
+  it('cannot go up from orion arm (top level)', () => {
+    const state = new ScaleLevelState();
+    state.goUp(); // Planet -> SolarSystem
+    state.goUp(); // SolarSystem -> Stellar
+    state.goUp(); // Stellar -> LocalBubble
+    state.goUp(); // LocalBubble -> OrionArm
     expect(state.canGoUp()).toBe(false);
   });
 

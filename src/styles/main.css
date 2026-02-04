@@ -1161,3 +1161,69 @@ html, body {
   color: rgba(180, 190, 200, 0.6);
   margin-top: 2px;
 }
+
+/* Orion Arm labels */
+.orion-arm-label {
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.orion-arm-label-content {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  transform: translateX(-6px);
+}
+
+.orion-arm-label-line {
+  width: 0;
+  height: 1px;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.5);
+  transition: width 0.5s ease-out;
+}
+
+.orion-arm-label.line-visible .orion-arm-label-line {
+  width: 25px;
+}
+
+.orion-arm-label-text {
+  display: flex;
+  flex-direction: column;
+  margin-right: 6px;
+  opacity: 0;
+  transform: translateX(-5px);
+  transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+}
+
+.orion-arm-label.text-visible .orion-arm-label-text {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.orion-arm-label.hover-visible .orion-arm-label-line {
+  width: 25px;
+  transition: none;
+}
+
+.orion-arm-label.hover-visible .orion-arm-label-text {
+  opacity: 1;
+  transform: translateX(0);
+  transition: none;
+}
+
+.orion-arm-label-name {
+  font-family: 'Playfair Display', serif;
+  font-size: 11px;
+  font-weight: 400;
+  color: rgba(230, 237, 243, 0.9);
+  letter-spacing: 0.3px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.orion-arm-label-desc {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  color: rgba(180, 190, 200, 0.6);
+  margin-top: 2px;
+}

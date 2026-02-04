@@ -53,6 +53,8 @@ export class ScaleLevelNav {
         return 'Stellar';
       case ScaleLevel.LocalBubble:
         return 'Bubble';
+      case ScaleLevel.OrionArm:
+        return 'Orion';
       default:
         return '';
     }

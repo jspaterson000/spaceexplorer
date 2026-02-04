@@ -30,6 +30,8 @@ import { StarLabels } from './ui/StarLabels';
 import { getStarColor } from './data/NearbyStars';
 import { LocalBubble } from './objects/LocalBubble';
 import { LocalBubbleLabels } from './ui/LocalBubbleLabels';
+import { OrionArm } from './objects/OrionArm';
+import { OrionArmLabels } from './ui/OrionArmLabels';
 
 const canvas = document.getElementById('canvas') as HTMLCanvasElement;
 const renderer = new Renderer({ canvas });
@@ -155,6 +157,20 @@ localBubble.getClusters().forEach((cluster, index) => {
   localBubbleLabels.addLabel(cluster, position, color, cluster.notable);
 });
 
+// Orion Arm (visible in orion arm mode)
+const orionArm = new OrionArm();
+orionArm.addToScene(scene);
+
+// Orion Arm labels
+const orionArmLabels = new OrionArmLabels(document.body, scene);
+
+// Add labels for all Orion Arm objects
+orionArm.getObjects().forEach((obj, index) => {
+  const position = orionArm.getObjectPosition(index);
+  const color = obj.type === 'marker' ? '#ffee88' : obj.color;
+  orionArmLabels.addLabel(obj, position, color, obj.notable);
+});
+
 // Navigation
 const navigation = new Navigation(orbitCamera);
 
@@ -222,6 +238,13 @@ function updateTitleCardForLevel(level: ScaleLevel): void {
       factsElement.innerHTML = localBubbleFactsTemplate.innerHTML;
     }
     statsElement.classList.add('hidden');
+  } else if (level === ScaleLevel.OrionArm) {
+    titleElement.textContent = 'Orion Arm';
+    const orionArmFactsTemplate = document.getElementById('orion-arm-facts-template') as HTMLTemplateElement;
+    if (orionArmFactsTemplate) {
+      factsElement.innerHTML = orionArmFactsTemplate.innerHTML;
+    }
+    statsElement.classList.add('hidden');
   }
 }
 
@@ -273,6 +296,7 @@ scaleLevelNav.setOnLevelChange((level) => {
   const isStellar = level === ScaleLevel.Stellar;
   const isPlanet = level === ScaleLevel.Planet;
   const isLocalBubble = level === ScaleLevel.LocalBubble;
+  const isOrionArm = level === ScaleLevel.OrionArm;
 
   fadeTransition(
     // Setup: swap everything while screen is black
@@ -281,17 +305,17 @@ scaleLevelNav.setOnLevelChange((level) => {
       visualScaleLevel = level;
 
       // Set orrery mode on Sun (moves to origin, scales up)
-      sun.setOrreryMode(isOrrery || isStellar || isLocalBubble);
+      sun.setOrreryMode(isOrrery || isStellar || isLocalBubble || isOrionArm);
 
       // Set orrery mode on all planets
-      earth.setOrreryMode(isOrrery || isStellar || isLocalBubble);
-      mercury.setOrreryMode(isOrrery || isStellar || isLocalBubble);
-      venus.setOrreryMode(isOrrery || isStellar || isLocalBubble);
-      mars.setOrreryMode(isOrrery || isStellar || isLocalBubble);
-      jupiter.setOrreryMode(isOrrery || isStellar || isLocalBubble);
-      saturn.setOrreryMode(isOrrery || isStellar || isLocalBubble);
-      uranus.setOrreryMode(isOrrery || isStellar || isLocalBubble);
-      neptune.setOrreryMode(isOrrery || isStellar || isLocalBubble);
+      earth.setOrreryMode(isOrrery || isStellar || isLocalBubble || isOrionArm);
+      mercury.setOrreryMode(isOrrery || isStellar || isLocalBubble || isOrionArm);
+      venus.setOrreryMode(isOrrery || isStellar || isLocalBubble || isOrionArm);
+      mars.setOrreryMode(isOrrery || isStellar || isLocalBubble || isOrionArm);
+      jupiter.setOrreryMode(isOrrery || isStellar || isLocalBubble || isOrionArm);
+      saturn.setOrreryMode(isOrrery || isStellar || isLocalBubble || isOrionArm);
+      uranus.setOrreryMode(isOrrery || isStellar || isLocalBubble || isOrionArm);
+      neptune.setOrreryMode(isOrrery || isStellar || isLocalBubble || isOrionArm);
 
       // Update title card
       updateTitleCardForLevel(level);
@@ -334,6 +358,10 @@ scaleLevelNav.setOnLevelChange((level) => {
         localBubble.setVisible(false);
         localBubbleLabels.setVisible(false);
 
+        // Hide orion arm elements
+        orionArm.setVisible(false);
+        orionArmLabels.setVisible(false);
+
         // Show journey dock, time controls
         journeyDock.style.display = '';
         timeControls.show();
@@ -368,6 +396,10 @@ scaleLevelNav.setOnLevelChange((level) => {
         // Hide local bubble elements
         localBubble.setVisible(false);
         localBubbleLabels.setVisible(false);
+
+        // Hide orion arm elements
+        orionArm.setVisible(false);
+        orionArmLabels.setVisible(false);
 
         // Show stars at full opacity
         stars.setVisible(true);
@@ -421,6 +453,10 @@ scaleLevelNav.setOnLevelChange((level) => {
         localBubble.setVisible(false);
         localBubbleLabels.setVisible(false);
 
+        // Hide orion arm elements
+        orionArm.setVisible(false);
+        orionArmLabels.setVisible(false);
+
         // Show journey dock, hide time controls
         journeyDock.style.display = '';
         timeControls.hide();
@@ -429,7 +465,7 @@ scaleLevelNav.setOnLevelChange((level) => {
         // ========================================
         // Stellar → Local Bubble
         // ========================================
-        orbitCamera.setPositionImmediate(12.5, Math.PI / 3, new THREE.Vector3(0, 0, 0));
+        orbitCamera.setPositionImmediate(12.0, Math.PI / 3, new THREE.Vector3(0, 0, 0));
 
         // Hide all solar system objects
         earth.mesh.visible = false;
@@ -459,6 +495,57 @@ scaleLevelNav.setOnLevelChange((level) => {
         localBubble.setVisible(true);
         localBubble.setOpacityImmediate(1);
 
+        // Hide orion arm elements
+        orionArm.setVisible(false);
+        orionArmLabels.setVisible(false);
+
+        // Hide journey dock and time controls
+        journeyDock.style.display = 'none';
+        timeControls.hide();
+
+        // Enable auto-rotation
+        orbitCamera.setAutoRotate(true);
+
+        // Zoom out during fade-in
+        orbitCamera.animateZoomTo(12.4);
+      } else if (isOrionArm) {
+        // ========================================
+        // Local Bubble → Orion Arm
+        // ========================================
+        orbitCamera.setPositionImmediate(12.6, Math.PI / 3, new THREE.Vector3(0, 0, 0));
+
+        // Hide all solar system objects
+        earth.mesh.visible = false;
+        earth.atmosphere.visible = false;
+        mercury.mesh.visible = false;
+        venus.mesh.visible = false;
+        mars.mesh.visible = false;
+        jupiter.mesh.visible = false;
+        saturn.mesh.visible = false;
+        uranus.mesh.visible = false;
+        neptune.mesh.visible = false;
+        moon.mesh.visible = false;
+        satellites.mesh.visible = false;
+        sun.mesh.visible = false;
+        sun.hideFlares();
+
+        // Hide solar system overlays
+        orbitalPaths.forEach(({ path }) => path.setVisible(false));
+        oortCloud.setVisible(false);
+        planetLabels.setVisible(false);
+
+        // Hide stellar elements
+        stars.setVisible(false);
+        starLabels.setVisible(false);
+
+        // Hide local bubble elements
+        localBubble.setVisible(false);
+        localBubbleLabels.setVisible(false);
+
+        // Show Orion Arm
+        orionArm.setVisible(true);
+        orionArm.setOpacityImmediate(1);
+
         // Hide journey dock and time controls
         journeyDock.style.display = 'none';
         timeControls.hide();
@@ -485,6 +572,11 @@ scaleLevelNav.setOnLevelChange((level) => {
         // Show local bubble labels after zoom completes
         setTimeout(() => {
           localBubbleLabels.setVisible(true);
+        }, 3000);
+      } else if (isOrionArm) {
+        // Show orion arm labels after zoom completes
+        setTimeout(() => {
+          orionArmLabels.setVisible(true);
         }, 3000);
       }
     }
@@ -847,6 +939,10 @@ function animate() {
   localBubble.update(time);
   localBubble.updateOpacity(0.06);
 
+  // Update Orion Arm animations and opacity
+  orionArm.update(time);
+  orionArm.updateOpacity(0.06);
+
   // Request satellite positions with real time
   worker.requestPositions(Date.now());
 
@@ -861,6 +957,9 @@ function animate() {
 
   // Render local bubble labels
   localBubbleLabels.render(orbitCamera.camera);
+
+  // Render orion arm labels
+  orionArmLabels.render(orbitCamera.camera);
 
   updateStats();
 }
