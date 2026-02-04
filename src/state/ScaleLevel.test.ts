@@ -14,10 +14,11 @@ describe('ScaleLevel', () => {
     expect(state.current).toBe(ScaleLevel.SolarSystem);
   });
 
-  it('cannot go up from solar system (top level)', () => {
+  it('can go up from stellar (not top level anymore)', () => {
     const state = new ScaleLevelState();
-    state.goUp();
-    expect(state.canGoUp()).toBe(false);
+    state.goUp(); // Planet -> SolarSystem
+    state.goUp(); // SolarSystem -> Stellar
+    expect(state.canGoUp()).toBe(true);
   });
 
   it('can go down from solar system to planet', () => {
@@ -42,5 +43,49 @@ describe('ScaleLevel', () => {
   it('defaults last focused body to earth', () => {
     const state = new ScaleLevelState();
     expect(state.lastFocusedBody).toBe('earth');
+  });
+
+  it('can go up from stellar to local bubble', () => {
+    const state = new ScaleLevelState();
+    state.goUp(); // Planet -> SolarSystem
+    state.goUp(); // SolarSystem -> Stellar
+    expect(state.canGoUp()).toBe(true);
+    state.goUp(); // Stellar -> LocalBubble
+    expect(state.current).toBe(ScaleLevel.LocalBubble);
+  });
+
+  it('cannot go up from local bubble (top level)', () => {
+    const state = new ScaleLevelState();
+    state.goUp(); // Planet -> SolarSystem
+    state.goUp(); // SolarSystem -> Stellar
+    state.goUp(); // Stellar -> LocalBubble
+    expect(state.canGoUp()).toBe(false);
+  });
+
+  it('can go down from local bubble to stellar', () => {
+    const state = new ScaleLevelState();
+    state.goUp();
+    state.goUp();
+    state.goUp();
+    expect(state.canGoDown()).toBe(true);
+    state.goDown();
+    expect(state.current).toBe(ScaleLevel.Stellar);
+  });
+
+  it('isLocalBubbleMode returns true at local bubble level', () => {
+    const state = new ScaleLevelState();
+    state.goUp();
+    state.goUp();
+    state.goUp();
+    expect(state.isLocalBubbleMode()).toBe(true);
+  });
+
+  it('isLocalBubbleMode returns false at other levels', () => {
+    const state = new ScaleLevelState();
+    expect(state.isLocalBubbleMode()).toBe(false);
+    state.goUp();
+    expect(state.isLocalBubbleMode()).toBe(false);
+    state.goUp();
+    expect(state.isLocalBubbleMode()).toBe(false);
   });
 });

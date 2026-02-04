@@ -2,9 +2,10 @@ export enum ScaleLevel {
   Planet = 'planet',
   SolarSystem = 'solar-system',
   Stellar = 'stellar',
+  LocalBubble = 'local-bubble',
 }
 
-const LEVELS = [ScaleLevel.Planet, ScaleLevel.SolarSystem, ScaleLevel.Stellar];
+const LEVELS = [ScaleLevel.Planet, ScaleLevel.SolarSystem, ScaleLevel.Stellar, ScaleLevel.LocalBubble];
 
 export class ScaleLevelState {
   private _current: ScaleLevel = ScaleLevel.Planet;
@@ -52,5 +53,9 @@ export class ScaleLevelState {
 
   isStellarMode(): boolean {
     return this._current === ScaleLevel.Stellar;
+  }
+
+  isLocalBubbleMode(): boolean {
+    return this._current === ScaleLevel.LocalBubble;
   }
 }
