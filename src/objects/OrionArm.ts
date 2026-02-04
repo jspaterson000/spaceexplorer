@@ -17,6 +17,14 @@ const SPECTRAL_COLORS: Record<string, number> = {
   M: 0xff6633,
 };
 
+/** Box-Muller transform for Gaussian-distributed random numbers. */
+function randomGaussian(): number {
+  let u = 0, v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+}
+
 /**
  * Visual representation of the Orion Arm — nebulae as glowing sprites
  * and ambient star field as point clouds.
@@ -133,14 +141,21 @@ export class OrionArm {
     sizes[0] = 4.0;
     idx = 1;
 
-    // Distribute ambient stars throughout the arm region
-    const maxDist = 10000; // ly
+    // Distribute ambient stars in a natural spherical falloff
+    // Use Gaussian-like distribution: dense near center, fading at edges
+    const scaleRadius = 6000; // ly — characteristic radius
     for (let i = 0; i < starCount; i++) {
-      // Random position within the arm volume
-      // Flatten slightly in y (galactic plane) to suggest disk structure
-      const x = (Math.random() - 0.5) * 2 * maxDist;
-      const y = (Math.random() - 0.5) * 2 * maxDist * 0.15;
-      const z = (Math.random() - 0.5) * 2 * maxDist;
+      // Spherical coordinates with Gaussian radial falloff
+      const u = Math.random();
+      const v = Math.random();
+      const theta = 2 * Math.PI * u;
+      const phi = Math.acos(2 * v - 1);
+      // Box-Muller-ish radial distribution: denser near center, tails off
+      const r = scaleRadius * Math.abs(randomGaussian()) * 0.8;
+
+      const x = r * Math.sin(phi) * Math.cos(theta);
+      const y = r * Math.cos(phi) * 0.15; // Flatten to galactic plane
+      const z = r * Math.sin(phi) * Math.sin(theta);
 
       const pos = OrionArm.scalePosition([x, y, z]);
       positions[idx * 3] = pos.x;
