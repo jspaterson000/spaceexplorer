@@ -119,13 +119,13 @@ export class MilkyWay {
       transparent: true,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
-      opacity: 0.7,
+      opacity: 0.35,
     });
     this.bulgeMaterial = material;
 
     const sprite = new THREE.Sprite(material);
     sprite.position.set(0, 0, 0);
-    const bulgeScale = Math.sqrt(8000) * MilkyWay.SF * 1.2;
+    const bulgeScale = Math.sqrt(8000) * MilkyWay.SF * 0.8;
     sprite.scale.set(bulgeScale, bulgeScale, 1);
 
     this.mesh.add(sprite);
@@ -199,13 +199,13 @@ export class MilkyWay {
           transparent: true,
           blending: THREE.AdditiveBlending,
           depthWrite: false,
-          opacity: 0.3,
+          opacity: 0.12,
           rotation: Math.random() * Math.PI * 2,
         });
 
         const sprite = new THREE.Sprite(material);
         sprite.position.copy(pos);
-        const cloudScale = Math.sqrt(arm.width * 1.5) * MilkyWay.SF * 0.5;
+        const cloudScale = Math.sqrt(arm.width * 1.5) * MilkyWay.SF * 0.3;
         sprite.scale.set(
           cloudScale * (0.8 + Math.random() * 0.4),
           cloudScale * (0.4 + Math.random() * 0.3),
@@ -443,10 +443,10 @@ export class MilkyWay {
   private updateAllOpacities(opacity: number): void {
     this.armMaterial.uniforms.opacity.value = opacity;
     for (const mat of this.cloudMaterials) {
-      mat.opacity = 0.3 * opacity;
+      mat.opacity = 0.12 * opacity;
     }
     if (this.bulgeMaterial) {
-      this.bulgeMaterial.opacity = 0.7 * opacity;
+      this.bulgeMaterial.opacity = 0.35 * opacity;
     }
   }
 }

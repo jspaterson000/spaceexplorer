@@ -605,7 +605,7 @@ scaleLevelNav.setOnLevelChange((level) => {
         // Orion Arm → Milky Way
         // ========================================
         // Top-down view: phi near 0 looks straight down onto the galactic plane
-        orbitCamera.setPositionImmediate(14.5, 0.3, new THREE.Vector3(0, 0, 0));
+        orbitCamera.setPositionImmediate(15.2, 0.3, new THREE.Vector3(0, 0, 0));
 
         // Hide all solar system objects
         earth.mesh.visible = false;
@@ -651,7 +651,7 @@ scaleLevelNav.setOnLevelChange((level) => {
         orbitCamera.setAutoRotate(true);
 
         // Zoom out during fade-in
-        orbitCamera.animateZoomTo(15.0);
+        orbitCamera.animateZoomTo(15.8);
       }
     },
     // After reveal: label entrance animations
