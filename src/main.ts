@@ -512,7 +512,7 @@ scaleLevelNav.setOnLevelChange((level) => {
         // ========================================
         // Local Bubble → Orion Arm
         // ========================================
-        orbitCamera.setPositionImmediate(13.2, Math.PI / 3, new THREE.Vector3(0, 0, 0));
+        orbitCamera.setPositionImmediate(13.4, Math.PI / 3, new THREE.Vector3(0, 0, 0));
 
         // Hide all solar system objects
         earth.mesh.visible = false;
@@ -554,7 +554,7 @@ scaleLevelNav.setOnLevelChange((level) => {
         orbitCamera.setAutoRotate(true);
 
         // Zoom out during fade-in
-        orbitCamera.animateZoomTo(13.8);
+        orbitCamera.animateZoomTo(14.0);
       }
     },
     // After reveal: label entrance animations
