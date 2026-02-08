@@ -1,6 +1,7 @@
 // src/ui/MissionPreview.ts
 import * as THREE from 'three';
 import { Camera } from '../engine/Camera';
+import { cosmicStore } from '../bridge/CosmicStore';
 
 interface CinematicPhase {
   name: string;
@@ -22,8 +23,6 @@ interface CinematicPhase {
 
 export class MissionPreview {
   private camera: Camera;
-  private container: HTMLElement;
-  private overlay: HTMLElement;
   private isPlaying = false;
   private currentPhaseIndex = 0;
   private phaseStartTime = 0;
@@ -39,11 +38,9 @@ export class MissionPreview {
   private smoothedZoom = 7.5;
   private smoothedTheta = 0;
   private smoothedPhi = Math.PI / 2.2;
-  private readonly smoothing = 0.04; // Lower = smoother
+  private readonly smoothing = 0.04;
 
   private phases: CinematicPhase[];
-
-  // Trajectory points (will be calculated based on Earth-Moon positions)
   private trajectoryPoints: THREE.Vector3[] = [];
 
   constructor(camera: Camera, scene: THREE.Scene, moonPosition: () => THREE.Vector3, satellitesMesh?: THREE.Points) {
@@ -52,48 +49,7 @@ export class MissionPreview {
     this.moonPosition = moonPosition;
     this.satellitesMesh = satellitesMesh || null;
 
-    // Create container
-    this.container = document.createElement('div');
-    this.container.id = 'mission-preview';
-    this.container.innerHTML = `
-      <button class="mission-start-btn">
-        <span class="mission-icon">◈</span>
-        <span class="mission-label">Artemis II</span>
-      </button>
-    `;
-    document.body.appendChild(this.container);
-
-    // Create overlay (hidden initially)
-    this.overlay = document.createElement('div');
-    this.overlay.id = 'mission-overlay';
-    this.overlay.className = 'hidden';
-    this.overlay.innerHTML = `
-      <div class="mission-header">
-        <div class="mission-badge">NASA ARTEMIS PROGRAM</div>
-        <h1 class="mission-title">Artemis II</h1>
-        <p class="mission-tagline">Humanity's Return to the Moon</p>
-      </div>
-      <div class="mission-phase">
-        <div class="phase-number">01</div>
-        <h2 class="phase-name">Launch</h2>
-        <p class="phase-subtitle">Kennedy Space Center</p>
-        <p class="phase-description">The Space Launch System rocket carries Orion and its crew of four astronauts into Earth orbit.</p>
-      </div>
-      <div class="mission-progress">
-        <div class="progress-bar"><div class="progress-fill"></div></div>
-        <div class="progress-stats">
-          <span class="stat"><strong>Distance:</strong> <span id="mission-distance">0 km</span></span>
-          <span class="stat"><strong>Day:</strong> <span id="mission-day">1</span> of 10</span>
-        </div>
-      </div>
-      <div class="mission-controls">
-        <button class="control-btn" id="mission-close">✕ Exit Preview</button>
-      </div>
-    `;
-    document.body.appendChild(this.overlay);
-
     // Define cinematic mission phases
-    // Trajectory structure: orbit (0-0.35), outbound (0.36-0.58), flyby (0.59-0.77), return (0.77-1.0)
     this.phases = [
       {
         name: 'Launch',
@@ -103,12 +59,9 @@ export class MissionPreview {
         trajectoryStart: 0.00,
         trajectoryEnd: 0.08,
         camera: {
-          startZoom: 7.3,
-          endZoom: 7.5,
-          startTheta: 0,
-          endTheta: 0.3,
-          startPhi: Math.PI / 2.2,
-          endPhi: Math.PI / 2.1,
+          startZoom: 7.3, endZoom: 7.5,
+          startTheta: 0, endTheta: 0.3,
+          startPhi: Math.PI / 2.2, endPhi: Math.PI / 2.1,
           followSpacecraft: false,
         },
       },
@@ -120,12 +73,9 @@ export class MissionPreview {
         trajectoryStart: 0.08,
         trajectoryEnd: 0.35,
         camera: {
-          startZoom: 7.5,
-          endZoom: 7.6,
-          startTheta: 0.3,
-          endTheta: Math.PI * 0.8,
-          startPhi: Math.PI / 2.1,
-          endPhi: Math.PI / 2.3,
+          startZoom: 7.5, endZoom: 7.6,
+          startTheta: 0.3, endTheta: Math.PI * 0.8,
+          startPhi: Math.PI / 2.1, endPhi: Math.PI / 2.3,
           followSpacecraft: true,
         },
       },
@@ -137,12 +87,9 @@ export class MissionPreview {
         trajectoryStart: 0.35,
         trajectoryEnd: 0.45,
         camera: {
-          startZoom: 7.6,
-          endZoom: 8.2,
-          startTheta: Math.PI * 0.8,
-          endTheta: Math.PI * 1.0,
-          startPhi: Math.PI / 2.3,
-          endPhi: Math.PI / 2.5,
+          startZoom: 7.6, endZoom: 8.2,
+          startTheta: Math.PI * 0.8, endTheta: Math.PI * 1.0,
+          startPhi: Math.PI / 2.3, endPhi: Math.PI / 2.5,
           followSpacecraft: true,
         },
       },
@@ -154,12 +101,9 @@ export class MissionPreview {
         trajectoryStart: 0.45,
         trajectoryEnd: 0.59,
         camera: {
-          startZoom: 8.2,
-          endZoom: 8.4,
-          startTheta: Math.PI * 1.0,
-          endTheta: Math.PI * 1.2,
-          startPhi: Math.PI / 2.5,
-          endPhi: Math.PI / 2.2,
+          startZoom: 8.2, endZoom: 8.4,
+          startTheta: Math.PI * 1.0, endTheta: Math.PI * 1.2,
+          startPhi: Math.PI / 2.5, endPhi: Math.PI / 2.2,
           followSpacecraft: true,
         },
       },
@@ -171,12 +115,9 @@ export class MissionPreview {
         trajectoryStart: 0.59,
         trajectoryEnd: 0.77,
         camera: {
-          startZoom: 8.4,
-          endZoom: 7.4,
-          startTheta: Math.PI * 1.2,
-          endTheta: Math.PI * 1.5,
-          startPhi: Math.PI / 2.2,
-          endPhi: Math.PI / 2.0,
+          startZoom: 8.4, endZoom: 7.4,
+          startTheta: Math.PI * 1.2, endTheta: Math.PI * 1.5,
+          startPhi: Math.PI / 2.2, endPhi: Math.PI / 2.0,
           followSpacecraft: true,
         },
       },
@@ -188,12 +129,9 @@ export class MissionPreview {
         trajectoryStart: 0.77,
         trajectoryEnd: 0.94,
         camera: {
-          startZoom: 7.4,
-          endZoom: 8.2,
-          startTheta: Math.PI * 1.5,
-          endTheta: Math.PI * 1.8,
-          startPhi: Math.PI / 2.0,
-          endPhi: Math.PI / 2.3,
+          startZoom: 7.4, endZoom: 8.2,
+          startTheta: Math.PI * 1.5, endTheta: Math.PI * 1.8,
+          startPhi: Math.PI / 2.0, endPhi: Math.PI / 2.3,
           followSpacecraft: true,
         },
       },
@@ -205,32 +143,19 @@ export class MissionPreview {
         trajectoryStart: 0.94,
         trajectoryEnd: 1.00,
         camera: {
-          startZoom: 8.2,
-          endZoom: 7.2,
-          startTheta: Math.PI * 1.8,
-          endTheta: Math.PI * 2.0,
-          startPhi: Math.PI / 2.3,
-          endPhi: Math.PI / 2.1,
+          startZoom: 8.2, endZoom: 7.2,
+          startTheta: Math.PI * 1.8, endTheta: Math.PI * 2.0,
+          startPhi: Math.PI / 2.3, endPhi: Math.PI / 2.1,
           followSpacecraft: false,
         },
       },
     ];
 
-    this.setupEventListeners();
     this.createTrajectory();
     this.createSpacecraftMarker();
   }
 
-  private setupEventListeners(): void {
-    const startBtn = this.container.querySelector('.mission-start-btn');
-    startBtn?.addEventListener('click', () => this.start());
-
-    const closeBtn = this.overlay.querySelector('#mission-close');
-    closeBtn?.addEventListener('click', () => this.stop());
-  }
-
   private createSpacecraftMarker(): void {
-    // Create radial gradient texture for glowing effect
     const canvas = document.createElement('canvas');
     canvas.width = 128;
     canvas.height = 128;
@@ -243,7 +168,6 @@ export class MissionPreview {
       gradient.addColorStop(0.4, 'rgba(255, 200, 100, 0.6)');
       gradient.addColorStop(0.7, 'rgba(255, 180, 50, 0.3)');
       gradient.addColorStop(1, 'rgba(255, 150, 0, 0)');
-
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, 128, 128);
     }
@@ -257,7 +181,6 @@ export class MissionPreview {
     });
 
     this.spacecraftMarker = new THREE.Sprite(material);
-    // Size ~500km visual
     const markerSize = 500_000;
     this.spacecraftMarker.scale.set(markerSize, markerSize, 1);
     this.spacecraftMarker.visible = false;
@@ -265,65 +188,43 @@ export class MissionPreview {
   }
 
   private createTrajectory(): void {
-    // Create a free-return trajectory curve
     this.updateTrajectoryPoints();
   }
 
   private updateTrajectoryPoints(): void {
     const moonPos = this.moonPosition();
     const moonDist = moonPos.length();
-
     const points: THREE.Vector3[] = [];
 
     const EARTH_RADIUS = 6_371_000;
-    const PARKING_ORBIT_RADIUS = EARTH_RADIUS * 1.8; // Low Earth orbit ~400km altitude scaled
-    const MOON_RADIUS = 1_737_000 * 3; // Visual radius
-    const FLYBY_DIST = MOON_RADIUS * 2.5; // Close flyby distance
+    const PARKING_ORBIT_RADIUS = EARTH_RADIUS * 1.8;
+    const MOON_RADIUS = 1_737_000 * 3;
+    const FLYBY_DIST = MOON_RADIUS * 2.5;
 
-    // Normalize moon direction
     const toMoon = moonPos.clone().normalize();
-    // Perpendicular in XZ plane (for orbit plane)
     const perp = new THREE.Vector3(-toMoon.z, 0, toMoon.x).normalize();
 
-    // Phase 1: Earth parking orbit (1.5 orbits for systems check)
+    // Phase 1: Earth parking orbit
     const orbitPoints = 60;
     const orbitRevolutions = 1.5;
     for (let i = 0; i <= orbitPoints; i++) {
       const angle = (i / orbitPoints) * Math.PI * 2 * orbitRevolutions;
-      const x = Math.cos(angle) * PARKING_ORBIT_RADIUS;
-      const z = Math.sin(angle) * PARKING_ORBIT_RADIUS;
-      points.push(new THREE.Vector3(x, 0, z));
+      points.push(new THREE.Vector3(Math.cos(angle) * PARKING_ORBIT_RADIUS, 0, Math.sin(angle) * PARKING_ORBIT_RADIUS));
     }
 
-    // Get TLI departure point (where we leave Earth orbit)
     const tliPoint = points[points.length - 1].clone();
 
-    // Phase 2: Trans-lunar trajectory using smooth curve
-    // Control points for outbound journey
-    const outboundControl1 = tliPoint.clone().add(
-      tliPoint.clone().normalize().multiplyScalar(moonDist * 0.2)
-    );
+    // Phase 2: Trans-lunar trajectory
+    const outboundControl1 = tliPoint.clone().add(tliPoint.clone().normalize().multiplyScalar(moonDist * 0.2));
     const outboundControl2 = moonPos.clone().sub(toMoon.clone().multiplyScalar(moonDist * 0.3));
-
-    // Approach point (before lunar flyby)
     const approachPoint = moonPos.clone().sub(toMoon.clone().multiplyScalar(FLYBY_DIST));
+    const outboundCurve = new THREE.CubicBezierCurve3(tliPoint, outboundControl1, outboundControl2, approachPoint);
+    for (let i = 1; i <= 40; i++) points.push(outboundCurve.getPoint(i / 40));
 
-    // Outbound curve
-    const outboundCurve = new THREE.CubicBezierCurve3(
-      tliPoint,
-      outboundControl1,
-      outboundControl2,
-      approachPoint
-    );
-    for (let i = 1; i <= 40; i++) {
-      points.push(outboundCurve.getPoint(i / 40));
-    }
-
-    // Phase 3: Lunar flyby - arc around the far side of Moon
+    // Phase 3: Lunar flyby
     const flybyPoints = 30;
     for (let i = 0; i <= flybyPoints; i++) {
-      const angle = -Math.PI * 0.5 + (i / flybyPoints) * Math.PI; // 180 degree arc
-      // Orbit in the plane containing Earth-Moon line
+      const angle = -Math.PI * 0.5 + (i / flybyPoints) * Math.PI;
       const offset = new THREE.Vector3(
         toMoon.x * Math.cos(angle) + perp.x * Math.sin(angle),
         0,
@@ -332,43 +233,21 @@ export class MissionPreview {
       points.push(moonPos.clone().add(offset));
     }
 
-    // Departure point (after lunar flyby)
     const departPoint = points[points.length - 1].clone();
 
     // Phase 4: Return trajectory
-    const returnControl1 = departPoint.clone().add(
-      departPoint.clone().sub(moonPos).normalize().multiplyScalar(moonDist * 0.2)
-    );
+    const returnControl1 = departPoint.clone().add(departPoint.clone().sub(moonPos).normalize().multiplyScalar(moonDist * 0.2));
     const returnControl2 = perp.clone().multiplyScalar(-PARKING_ORBIT_RADIUS * 2);
-    const splashdown = new THREE.Vector3(
-      -PARKING_ORBIT_RADIUS * 0.8,
-      0,
-      -PARKING_ORBIT_RADIUS * 0.5
-    );
-
-    const returnCurve = new THREE.CubicBezierCurve3(
-      departPoint,
-      returnControl1,
-      returnControl2,
-      splashdown
-    );
-    for (let i = 1; i <= 40; i++) {
-      points.push(returnCurve.getPoint(i / 40));
-    }
+    const splashdown = new THREE.Vector3(-PARKING_ORBIT_RADIUS * 0.8, 0, -PARKING_ORBIT_RADIUS * 0.5);
+    const returnCurve = new THREE.CubicBezierCurve3(departPoint, returnControl1, returnControl2, splashdown);
+    for (let i = 1; i <= 40; i++) points.push(returnCurve.getPoint(i / 40));
 
     this.trajectoryPoints = points;
 
-    // Update or create trajectory line
-    if (this.trajectoryLine) {
-      this.scene.remove(this.trajectoryLine);
-    }
+    if (this.trajectoryLine) this.scene.remove(this.trajectoryLine);
 
     const geometry = new THREE.BufferGeometry().setFromPoints(points);
-    const material = new THREE.LineBasicMaterial({
-      color: 0x58a6ff,
-      transparent: true,
-      opacity: 0.7,
-    });
+    const material = new THREE.LineBasicMaterial({ color: 0x58a6ff, transparent: true, opacity: 0.7 });
     this.trajectoryLine = new THREE.Line(geometry, material);
     this.trajectoryLine.visible = false;
     this.scene.add(this.trajectoryLine);
@@ -380,14 +259,11 @@ export class MissionPreview {
     const index = Math.floor(scaledProgress);
     const nextIndex = Math.min(index + 1, this.trajectoryPoints.length - 1);
     const t = scaledProgress - index;
-    // Smoothly interpolate between trajectory points
     return this.trajectoryPoints[index].clone().lerp(this.trajectoryPoints[nextIndex], t);
   }
 
   private easeInOutCubic(t: number): number {
-    return t < 0.5
-      ? 4 * t * t * t
-      : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
   }
 
   private lerp(a: number, b: number, t: number): number {
@@ -399,72 +275,49 @@ export class MissionPreview {
     this.isPlaying = true;
     this.currentPhaseIndex = 0;
     this.phaseStartTime = performance.now();
-    this.overlay.classList.remove('hidden');
-    if (this.trajectoryLine) {
-      this.trajectoryLine.visible = true;
-    }
-    if (this.spacecraftMarker) {
-      this.spacecraftMarker.visible = true;
-    }
 
-    // Hide satellites during mission preview (remember original state)
+    if (this.trajectoryLine) this.trajectoryLine.visible = true;
+    if (this.spacecraftMarker) this.spacecraftMarker.visible = true;
+
+    // Hide satellites during mission preview
     if (this.satellitesMesh) {
       this.satellitesWereVisible = this.satellitesMesh.visible;
       this.satellitesMesh.visible = false;
     }
 
-    // Disable camera auto-rotation during preview
     this.camera.setAutoRotate(false);
 
-    // Initialize smoothed camera values from first phase
     const firstPhase = this.phases[0];
     this.smoothedTarget.set(0, 0, 0);
     this.smoothedZoom = firstPhase.camera.startZoom;
     this.smoothedTheta = firstPhase.camera.startTheta;
     this.smoothedPhi = firstPhase.camera.startPhi;
 
-    // Hide other UI elements via body class
-    document.body.classList.add('mission-active');
-
-    this.updatePhaseDisplay();
+    // Push mission state to bridge
+    cosmicStore.setState({
+      missionActive: true,
+      missionPhase: {
+        index: 0,
+        name: firstPhase.name,
+        subtitle: firstPhase.subtitle,
+        description: firstPhase.description,
+      },
+      missionProgress: 0,
+      missionDistance: '0 km',
+      missionDay: 1,
+    });
   }
 
   stop(): void {
     this.isPlaying = false;
-    this.overlay.classList.add('hidden');
-    if (this.trajectoryLine) {
-      this.trajectoryLine.visible = false;
-    }
-    if (this.spacecraftMarker) {
-      this.spacecraftMarker.visible = false;
-    }
+    if (this.trajectoryLine) this.trajectoryLine.visible = false;
+    if (this.spacecraftMarker) this.spacecraftMarker.visible = false;
 
-    // Restore satellites to their previous state
     if (this.satellitesMesh) {
       this.satellitesMesh.visible = this.satellitesWereVisible;
     }
 
-    // Restore UI elements
-    document.body.classList.remove('mission-active');
-  }
-
-  private updatePhaseDisplay(): void {
-    const phase = this.phases[this.currentPhaseIndex];
-    const phaseNumber = this.overlay.querySelector('.phase-number');
-    const phaseName = this.overlay.querySelector('.phase-name');
-    const phaseSubtitle = this.overlay.querySelector('.phase-subtitle');
-    const phaseDescription = this.overlay.querySelector('.phase-description');
-
-    if (phaseNumber) phaseNumber.textContent = String(this.currentPhaseIndex + 1).padStart(2, '0');
-    if (phaseName) phaseName.textContent = phase.name;
-    if (phaseSubtitle) phaseSubtitle.textContent = phase.subtitle;
-    if (phaseDescription) phaseDescription.textContent = phase.description;
-
-    // Animate in
-    const phaseEl = this.overlay.querySelector('.mission-phase');
-    phaseEl?.classList.remove('animate');
-    void (phaseEl as HTMLElement)?.offsetWidth; // Trigger reflow
-    phaseEl?.classList.add('animate');
+    cosmicStore.setState({ missionActive: false, missionPhase: null });
   }
 
   update(): void {
@@ -474,7 +327,6 @@ export class MissionPreview {
     const elapsed = now - this.phaseStartTime;
     const phase = this.phases[this.currentPhaseIndex];
 
-    // Calculate eased progress within current phase
     const rawT = Math.min(elapsed / phase.duration, 1);
     const t = this.easeInOutCubic(rawT);
 
@@ -483,72 +335,62 @@ export class MissionPreview {
     const spacecraftPos = this.getTrajectoryPoint(trajectoryT);
     if (this.spacecraftMarker) {
       this.spacecraftMarker.position.copy(spacecraftPos);
-
-      // Pulse the marker size slightly for visual interest
       const pulse = 1 + 0.1 * Math.sin(now * 0.005);
       const baseSize = 500_000;
       this.spacecraftMarker.scale.set(baseSize * pulse, baseSize * pulse, 1);
     }
 
-    // Calculate target camera properties
+    // Camera
     const targetZoom = this.lerp(phase.camera.startZoom, phase.camera.endZoom, t);
     const targetTheta = this.lerp(phase.camera.startTheta, phase.camera.endTheta, t);
     const targetPhi = this.lerp(phase.camera.startPhi, phase.camera.endPhi, t);
+    const targetPos = phase.camera.followSpacecraft ? spacecraftPos.clone() : new THREE.Vector3(0, 0, 0);
 
-    // Determine camera target position
-    const targetPos = phase.camera.followSpacecraft
-      ? spacecraftPos.clone()
-      : new THREE.Vector3(0, 0, 0);
-
-    // Apply exponential smoothing for buttery camera movement
     this.smoothedTarget.lerp(targetPos, this.smoothing);
     this.smoothedZoom += (targetZoom - this.smoothedZoom) * this.smoothing;
     this.smoothedTheta += (targetTheta - this.smoothedTheta) * this.smoothing;
     this.smoothedPhi += (targetPhi - this.smoothedPhi) * this.smoothing;
 
-    // Apply smoothed values to camera
     this.camera.setTargetImmediate(this.smoothedTarget.x, this.smoothedTarget.y, this.smoothedTarget.z);
     this.camera.setZoom(this.smoothedZoom);
     this.camera.setAngleImmediate(this.smoothedTheta, this.smoothedPhi);
 
-    // Update progress bar
+    // Update progress in bridge
     const totalDuration = this.phases.reduce((sum, p) => sum + p.duration, 0);
     const completedDuration = this.phases.slice(0, this.currentPhaseIndex).reduce((sum, p) => sum + p.duration, 0);
     const overallProgress = (completedDuration + elapsed) / totalDuration;
-    const progressFill = this.overlay.querySelector('.progress-fill') as HTMLElement;
-    if (progressFill) {
-      progressFill.style.width = `${overallProgress * 100}%`;
-    }
 
-    // Update stats
-    const moonDist = this.moonPosition().length();
     const currentDist = spacecraftPos.length();
-    const distanceEl = document.getElementById('mission-distance');
-    const dayEl = document.getElementById('mission-day');
-    if (distanceEl) distanceEl.textContent = this.formatDistance(currentDist);
-    if (dayEl) dayEl.textContent = String(Math.ceil(trajectoryT * 10) || 1);
+    cosmicStore.setState({
+      missionProgress: overallProgress,
+      missionDistance: this.formatDistance(currentDist),
+      missionDay: Math.ceil(trajectoryT * 10) || 1,
+    });
 
-    // Check for phase transition
+    // Phase transition
     if (elapsed >= phase.duration) {
       this.currentPhaseIndex++;
       if (this.currentPhaseIndex >= this.phases.length) {
-        // Mission complete
         setTimeout(() => this.stop(), 2000);
         return;
       }
       this.phaseStartTime = now;
-      this.updatePhaseDisplay();
+      const newPhase = this.phases[this.currentPhaseIndex];
+      cosmicStore.setState({
+        missionPhase: {
+          index: this.currentPhaseIndex,
+          name: newPhase.name,
+          subtitle: newPhase.subtitle,
+          description: newPhase.description,
+        },
+      });
     }
   }
 
   private formatDistance(meters: number): string {
-    if (meters >= 1_000_000_000) {
-      return `${(meters / 1_000_000_000).toFixed(1)}M km`;
-    } else if (meters >= 1_000_000) {
-      return `${(meters / 1_000_000).toFixed(0)} km`;
-    } else if (meters >= 1_000) {
-      return `${(meters / 1_000).toFixed(0)} km`;
-    }
+    if (meters >= 1_000_000_000) return `${(meters / 1_000_000_000).toFixed(1)}M km`;
+    if (meters >= 1_000_000) return `${(meters / 1_000_000).toFixed(0)} km`;
+    if (meters >= 1_000) return `${(meters / 1_000).toFixed(0)} km`;
     return `${meters.toFixed(0)} m`;
   }
 

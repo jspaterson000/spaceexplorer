@@ -5,8 +5,15 @@ import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer
 interface LabelData {
   name: string;
   description: string;
+  tooltip: string;
   notable: boolean;
 }
+
+interface LabelOptions {
+  minor?: boolean;
+}
+
+export type ArmHoverCallback = (armName: string | null) => void;
 
 /**
  * Floating labels for spiral arms and galactic features in Milky Way mode.
@@ -19,9 +26,10 @@ export class MilkyWayLabels {
   private scene: THREE.Scene;
   private visible = false;
   private currentHover: string | null = null;
+  private onArmHover: ArmHoverCallback | null = null;
 
-  constructor(container: HTMLElement, scene: THREE.Scene) {
-    this.scene = scene;
+  constructor(container: HTMLElement, _scene: THREE.Scene) {
+    this.scene = new THREE.Scene();
 
     this.renderer = new CSS2DRenderer();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -36,9 +44,17 @@ export class MilkyWayLabels {
     });
   }
 
-  addLabel(data: LabelData, position: THREE.Vector3, color: string, notable: boolean): void {
+  /** Register a callback for arm hover events. */
+  setArmHoverCallback(cb: ArmHoverCallback): void {
+    this.onArmHover = cb;
+  }
+
+  addLabel(data: LabelData, position: THREE.Vector3, color: string, notable: boolean, options?: LabelOptions): void {
     const labelDiv = document.createElement('div');
     labelDiv.className = 'milky-way-label';
+    if (options?.minor) {
+      labelDiv.classList.add('minor');
+    }
 
     const contentEl = document.createElement('span');
     contentEl.className = 'milky-way-label-content';
@@ -60,9 +76,31 @@ export class MilkyWayLabels {
 
     textEl.appendChild(nameEl);
     textEl.appendChild(descEl);
+
+    // Tooltip element (hidden by default, shown on hover)
+    if (data.tooltip) {
+      const tooltipEl = document.createElement('span');
+      tooltipEl.className = 'milky-way-label-tooltip';
+      tooltipEl.textContent = data.tooltip;
+      textEl.appendChild(tooltipEl);
+    }
+
     contentEl.appendChild(textEl);
     contentEl.appendChild(lineEl);
     labelDiv.appendChild(contentEl);
+
+    // Make notable labels interactive for hover
+    if (notable) {
+      labelDiv.classList.add('interactive');
+      labelDiv.addEventListener('mouseenter', () => {
+        labelDiv.classList.add('hovered');
+        this.onArmHover?.(data.name);
+      });
+      labelDiv.addEventListener('mouseleave', () => {
+        labelDiv.classList.remove('hovered');
+        this.onArmHover?.(null);
+      });
+    }
 
     const label = new CSS2DObject(labelDiv);
     label.position.copy(position);
@@ -116,7 +154,7 @@ export class MilkyWayLabels {
       this.labels.forEach((label) => {
         label.visible = false;
         const el = label.element as HTMLElement;
-        el.classList.remove('line-visible', 'text-visible', 'hover-visible');
+        el.classList.remove('line-visible', 'text-visible', 'hover-visible', 'hovered');
       });
     }
   }

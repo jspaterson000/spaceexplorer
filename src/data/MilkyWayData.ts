@@ -12,6 +12,8 @@ export interface SpiralArm {
   color: string; // base color for arm gas
   notable: boolean; // show label
   description: string;
+  tooltip: string; // 1-sentence hover tooltip
+  minor: boolean; // minor/inner arm (rendered at reduced opacity)
   // Label placement: angle along the arm (0-1 fraction of arm length)
   labelFraction: number;
 }
@@ -23,6 +25,7 @@ export interface GalacticFeature {
   color: string;
   notable: boolean;
   description: string;
+  tooltip: string; // 1-sentence hover tooltip
 }
 
 // Milky Way spiral arms
@@ -41,6 +44,8 @@ export const SPIRAL_ARMS: SpiralArm[] = [
     color: '#6688cc',
     notable: true,
     description: 'Major spiral arm',
+    tooltip: 'One of the Milky Way\'s two major arms, rich with star-forming regions.',
+    minor: false,
     labelFraction: 0.35,
   },
   {
@@ -55,6 +60,8 @@ export const SPIRAL_ARMS: SpiralArm[] = [
     color: '#cc7788',
     notable: true,
     description: 'Major spiral arm',
+    tooltip: 'Home to the Eagle, Omega, and Trifid nebulae.',
+    minor: false,
     labelFraction: 0.4,
   },
   {
@@ -69,6 +76,8 @@ export const SPIRAL_ARMS: SpiralArm[] = [
     color: '#88aadd',
     notable: true,
     description: 'Major spiral arm',
+    tooltip: 'The longest arm, extending from the galactic bar to the outer disk.',
+    minor: false,
     labelFraction: 0.35,
   },
   {
@@ -83,6 +92,8 @@ export const SPIRAL_ARMS: SpiralArm[] = [
     color: '#aa88bb',
     notable: true,
     description: 'Inner spiral arm',
+    tooltip: 'A dense inner arm wrapping close to the galactic center.',
+    minor: true,
     labelFraction: 0.3,
   },
   {
@@ -97,6 +108,8 @@ export const SPIRAL_ARMS: SpiralArm[] = [
     color: '#5577aa',
     notable: true,
     description: 'Outermost major arm',
+    tooltip: 'The farthest known arm, tracing the galaxy\'s outer edge.',
+    minor: true,
     labelFraction: 0.4,
   },
   {
@@ -111,6 +124,8 @@ export const SPIRAL_ARMS: SpiralArm[] = [
     color: '#99bbee',
     notable: true,
     description: 'Our spiral arm',
+    tooltip: 'Our home arm \u2014 a minor spur between the Perseus and Sagittarius arms.',
+    minor: false,
     labelFraction: 0.5,
   },
 ];
@@ -127,6 +142,7 @@ export const GALACTIC_FEATURES: GalacticFeature[] = [
     color: '#ffcc66',
     notable: true,
     description: 'Sagittarius A* · 26,000 ly',
+    tooltip: 'Home to Sagittarius A*, our galaxy\'s 4-million-solar-mass black hole.',
   },
   {
     name: 'Sun',
@@ -135,6 +151,7 @@ export const GALACTIC_FEATURES: GalacticFeature[] = [
     color: '#ffee88',
     notable: true,
     description: 'You are here · 26,000 ly from center',
+    tooltip: 'The Sun orbits the Milky Way once every ~230 million years.',
   },
 ];
 
@@ -147,4 +164,4 @@ export const GALACTIC_BAR = {
   color: '#ddbb77',
 };
 
-export const MILKY_WAY_SCALE_FACTOR = 5e13;
+export const MILKY_WAY_SCALE_FACTOR = 1.5e13;

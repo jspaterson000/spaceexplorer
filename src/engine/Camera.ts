@@ -69,9 +69,9 @@ export class Camera {
     const {
       fov = 60,
       near = 1,
-      far = 1e15,
+      far = 1e18,
       minZoom = 6.5, // ~3000km - just above Earth surface
-      maxZoom = 15,  // ~10B km - enough to see Neptune at 4.5B km, extended for stellar distances
+      maxZoom = 17,  // Extended for Milky Way galaxy view
       initialZoom = 7.5, // ~30,000 km
       damping = 0.08, // Smoother interpolation
       autoRotateSpeed = 0.0003, // Subtle cinematic drift

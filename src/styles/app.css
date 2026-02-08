@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+@theme {
+  /* Space colors mapped to shadcn semantic tokens */
+  --color-background: #05060a;
+  --color-foreground: #e6edf3;
+  --color-card: #0d1117;
+  --color-card-foreground: #e6edf3;
+  --color-popover: #0d1117;
+  --color-popover-foreground: #e6edf3;
+  --color-primary: #58a6ff;
+  --color-primary-foreground: #05060a;
+  --color-secondary: #1c1f26;
+  --color-secondary-foreground: #e6edf3;
+  --color-muted: #1c1f26;
+  --color-muted-foreground: #7d8590;
+  --color-accent: #1c1f26;
+  --color-accent-foreground: #e6edf3;
+  --color-destructive: #f97316;
+  --color-destructive-foreground: #05060a;
+  --color-border: rgba(255, 255, 255, 0.15);
+  --color-input: rgba(255, 255, 255, 0.15);
+  --color-ring: #58a6ff;
+
+  /* Space-specific palette */
+  --color-void: #05060a;
+  --color-cosmos: #0d1117;
+  --color-nebula: #1c1f26;
+  --color-starlight: #e6edf3;
+  --color-stardust: #7d8590;
+  --color-sol: #f4a623;
+  --color-ice: #58a6ff;
+  --color-pulse: #f97316;
+
+  /* Radius */
+  --radius-lg: 0.5rem;
+  --radius-md: calc(0.5rem - 2px);
+  --radius-sm: calc(0.5rem - 4px);
+
+  /* Fonts */
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-display: 'Playfair Display', Georgia, serif;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('https://fonts.gstatic.com/s/jetbrainsmono/v18/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKxjPVmUsaaDhw.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-void);
+  font-family: var(--font-mono);
+  color: var(--color-starlight);
+}
+
+#canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#react-root {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+}

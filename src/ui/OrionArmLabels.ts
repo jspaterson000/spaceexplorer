@@ -18,8 +18,8 @@ export class OrionArmLabels {
   private currentHover: string | null = null;
   private objectPositions: Map<string, THREE.Vector3> = new Map();
 
-  constructor(container: HTMLElement, scene: THREE.Scene) {
-    this.scene = scene;
+  constructor(container: HTMLElement, _scene: THREE.Scene) {
+    this.scene = new THREE.Scene();
 
     this.renderer = new CSS2DRenderer();
     this.renderer.setSize(window.innerWidth, window.innerHeight);

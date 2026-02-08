@@ -1,0 +1,360 @@
+/* Label styles for CSS2DRenderer overlays */
+/* These use state-driven class toggles (line-visible, text-visible, hover-visible)
+   that Tailwind can't express inline */
+
+/* Planet Labels (Orrery Mode) */
+.planet-label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  white-space: nowrap;
+  pointer-events: none;
+  margin-left: 50px;
+}
+
+.planet-label-line {
+  width: 0;
+  height: 1px;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.4);
+  transition: width 0.6s ease-out;
+}
+
+.planet-label.line-visible .planet-label-line {
+  width: 40px;
+}
+
+.planet-label-name {
+  margin-left: 6px;
+  font-family: 'Playfair Display', serif;
+  font-size: 12px;
+  font-weight: 400;
+  color: rgba(230, 237, 243, 0.85);
+  letter-spacing: 0.5px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  transform: translateX(-5px);
+  transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+}
+
+.planet-label.text-visible .planet-label-name {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.planet-label.jupiter,
+.planet-label.saturn,
+.planet-label.uranus,
+.planet-label.neptune {
+  margin-left: 60px;
+}
+
+.planet-label.oort-cloud {
+  margin-left: 60px;
+}
+
+.planet-label.oort-cloud .planet-label-line {
+  opacity: 0.5;
+}
+
+.planet-label.oort-cloud.line-visible .planet-label-line {
+  width: 25px;
+}
+
+.planet-label.oort-cloud .planet-label-name {
+  font-size: 11px;
+  font-style: italic;
+  opacity: 0.7;
+}
+
+/* Star Labels (Stellar Mode) */
+.star-label {
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.star-label-content {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  transform: translateX(-6px);
+}
+
+.star-label-line {
+  width: 0;
+  height: 1px;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.5);
+  transition: width 0.5s ease-out;
+}
+
+.star-label.line-visible .star-label-line {
+  width: 25px;
+}
+
+.star-label-text {
+  display: flex;
+  flex-direction: column;
+  margin-right: 6px;
+  opacity: 0;
+  transform: translateX(-5px);
+  transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+}
+
+.star-label.text-visible .star-label-text {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.star-label.hover-visible .star-label-line {
+  width: 25px;
+  transition: none;
+}
+
+.star-label.hover-visible .star-label-text {
+  opacity: 1;
+  transform: translateX(0);
+  transition: none;
+}
+
+.star-label-name {
+  font-family: 'Playfair Display', serif;
+  font-size: 11px;
+  font-weight: 400;
+  color: rgba(230, 237, 243, 0.9);
+  letter-spacing: 0.3px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.star-label-distance {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  color: rgba(180, 190, 200, 0.6);
+  margin-top: 2px;
+}
+
+/* Local Bubble Labels */
+.local-bubble-label {
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.local-bubble-label-content {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  transform: translateX(-6px);
+}
+
+.local-bubble-label-line {
+  width: 0;
+  height: 1px;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.5);
+  transition: width 0.5s ease-out;
+}
+
+.local-bubble-label.line-visible .local-bubble-label-line {
+  width: 25px;
+}
+
+.local-bubble-label-text {
+  display: flex;
+  flex-direction: column;
+  margin-right: 6px;
+  opacity: 0;
+  transform: translateX(-5px);
+  transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+}
+
+.local-bubble-label.text-visible .local-bubble-label-text {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.local-bubble-label.hover-visible .local-bubble-label-line {
+  width: 25px;
+  transition: none;
+}
+
+.local-bubble-label.hover-visible .local-bubble-label-text {
+  opacity: 1;
+  transform: translateX(0);
+  transition: none;
+}
+
+.local-bubble-label-name {
+  font-family: 'Playfair Display', serif;
+  font-size: 11px;
+  font-weight: 400;
+  color: rgba(230, 237, 243, 0.9);
+  letter-spacing: 0.3px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.local-bubble-label-desc {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  color: rgba(180, 190, 200, 0.6);
+  margin-top: 2px;
+}
+
+/* Orion Arm Labels */
+.orion-arm-label {
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.orion-arm-label-content {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  transform: translateX(-6px);
+}
+
+.orion-arm-label-line {
+  width: 0;
+  height: 1px;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.5);
+  transition: width 0.5s ease-out;
+}
+
+.orion-arm-label.line-visible .orion-arm-label-line {
+  width: 25px;
+}
+
+.orion-arm-label-text {
+  display: flex;
+  flex-direction: column;
+  margin-right: 6px;
+  opacity: 0;
+  transform: translateX(-5px);
+  transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+}
+
+.orion-arm-label.text-visible .orion-arm-label-text {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.orion-arm-label.hover-visible .orion-arm-label-line {
+  width: 25px;
+  transition: none;
+}
+
+.orion-arm-label.hover-visible .orion-arm-label-text {
+  opacity: 1;
+  transform: translateX(0);
+  transition: none;
+}
+
+.orion-arm-label-name {
+  font-family: 'Playfair Display', serif;
+  font-size: 11px;
+  font-weight: 400;
+  color: rgba(230, 237, 243, 0.9);
+  letter-spacing: 0.3px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.orion-arm-label-desc {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  color: rgba(180, 190, 200, 0.6);
+  margin-top: 2px;
+}
+
+/* Milky Way Labels */
+.milky-way-label {
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Interactive labels receive pointer events for hover */
+.milky-way-label.interactive {
+  pointer-events: auto;
+  cursor: default;
+}
+
+.milky-way-label-content {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  transform: translateX(-6px);
+}
+
+.milky-way-label-line {
+  width: 0;
+  height: 1px;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.5);
+  transition: width 0.5s ease-out;
+}
+
+.milky-way-label.line-visible .milky-way-label-line {
+  width: 25px;
+}
+
+.milky-way-label-text {
+  display: flex;
+  flex-direction: column;
+  margin-right: 6px;
+  opacity: 0;
+  transform: translateX(-5px);
+  transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+}
+
+.milky-way-label.text-visible .milky-way-label-text {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Minor/inner arms at reduced opacity */
+.milky-way-label.minor.text-visible .milky-way-label-text {
+  opacity: 0.85;
+}
+
+.milky-way-label.hover-visible .milky-way-label-line {
+  width: 25px;
+  transition: none;
+}
+
+.milky-way-label.hover-visible .milky-way-label-text {
+  opacity: 1;
+  transform: translateX(0);
+  transition: none;
+}
+
+.milky-way-label-name {
+  font-family: 'Playfair Display', serif;
+  font-size: 11px;
+  font-weight: 400;
+  color: rgba(230, 237, 243, 0.9);
+  letter-spacing: 0.3px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.milky-way-label-desc {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  color: rgba(180, 190, 200, 0.6);
+  margin-top: 2px;
+}
+
+/* Hover tooltip (hidden by default) */
+.milky-way-label-tooltip {
+  display: none;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  font-style: italic;
+  color: rgba(200, 210, 220, 0.7);
+  margin-top: 4px;
+  white-space: normal;
+  max-width: 180px;
+  line-height: 1.4;
+}
+
+.milky-way-label.hovered .milky-way-label-tooltip {
+  display: block;
+}

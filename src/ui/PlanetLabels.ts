@@ -18,8 +18,8 @@ export class PlanetLabels {
   private scene: THREE.Scene;
   private visible = false;
 
-  constructor(container: HTMLElement, scene: THREE.Scene) {
-    this.scene = scene;
+  constructor(container: HTMLElement, _scene: THREE.Scene) {
+    this.scene = new THREE.Scene();
 
     // Create CSS2D renderer
     this.renderer = new CSS2DRenderer();

@@ -38,9 +38,12 @@ export class MilkyWay {
   private armMaterial: THREE.ShaderMaterial;
   private cloudSprites: THREE.Sprite[] = [];
   private cloudMaterials: THREE.SpriteMaterial[] = [];
+  private armCloudMaterials: Map<string, THREE.SpriteMaterial[]> = new Map();
   private bulgeMaterial: THREE.SpriteMaterial | null = null;
+  private sunHaloMaterial: THREE.SpriteMaterial | null = null;
   private targetOpacity = 1.0;
   private currentOpacity = 1.0;
+  private highlightedArm: string | null = null;
 
   private static readonly SF = MILKY_WAY_SCALE_FACTOR;
 
@@ -58,6 +61,9 @@ export class MilkyWay {
     this.armPoints = result.mesh;
     this.armMaterial = result.material;
     this.mesh.add(this.armPoints);
+
+    // Sun halo pulse sprite
+    this.createSunHalo();
 
     this.mesh.visible = false;
   }
@@ -131,6 +137,43 @@ export class MilkyWay {
     this.mesh.add(sprite);
   }
 
+  // --- Sun halo pulse ---
+
+  private createSunHalo(): void {
+    const canvas = document.createElement('canvas');
+    const res = 128;
+    canvas.width = res;
+    canvas.height = res;
+    const ctx = canvas.getContext('2d')!;
+    const cx = res / 2, cy = res / 2;
+
+    const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, res / 2);
+    gradient.addColorStop(0, '#ffee8866');
+    gradient.addColorStop(0.2, '#ffdd6633');
+    gradient.addColorStop(0.5, '#ffcc4418');
+    gradient.addColorStop(1, '#00000000');
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, res, res);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    const material = new THREE.SpriteMaterial({
+      map: texture,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      opacity: 0.3,
+    });
+    this.sunHaloMaterial = material;
+
+    const sprite = new THREE.Sprite(material);
+    const sunPos = MilkyWay.scalePosition(SUN_GALACTIC_POSITION);
+    sprite.position.copy(sunPos);
+    const haloScale = Math.sqrt(3000) * MilkyWay.SF * 0.25;
+    sprite.scale.set(haloScale, haloScale, 1);
+    this.mesh.add(sprite);
+  }
+
   // --- Gas clouds along spiral arms ---
 
   private createCloudTexture(color: string, seed: number): THREE.Texture {
@@ -181,6 +224,7 @@ export class MilkyWay {
   private createArmClouds(): void {
     for (const arm of SPIRAL_ARMS) {
       const angleRange = arm.endAngle - arm.startAngle;
+      const armMats: THREE.SpriteMaterial[] = [];
 
       for (let i = 0; i < arm.cloudCount; i++) {
         const frac = (i + 0.5) / arm.cloudCount;
@@ -215,7 +259,10 @@ export class MilkyWay {
         this.mesh.add(sprite);
         this.cloudSprites.push(sprite);
         this.cloudMaterials.push(material);
+        armMats.push(material);
       }
+
+      this.armCloudMaterials.set(arm.name, armMats);
     }
   }
 
@@ -429,10 +476,16 @@ export class MilkyWay {
     this.updateAllOpacities(this.currentOpacity);
   }
 
-  update(_time: number): void {
+  update(time: number): void {
     // Subtle cloud rotation
     for (let i = 0; i < this.cloudSprites.length; i++) {
       this.cloudSprites[i].material.rotation += (i % 2 === 0 ? 1 : -1) * 0.000015;
+    }
+
+    // Sun halo idle pulse (~6s period)
+    if (this.sunHaloMaterial) {
+      const pulse = 0.25 + 0.15 * Math.sin(time * 0.001 * (Math.PI * 2 / 6));
+      this.sunHaloMaterial.opacity = pulse * this.currentOpacity;
     }
   }
 
@@ -440,10 +493,35 @@ export class MilkyWay {
     scene.add(this.mesh);
   }
 
+  /** Highlight a specific arm, dimming all others by ~10%. */
+  highlightArm(armName: string): void {
+    this.highlightedArm = armName;
+    this.applyArmHighlight();
+  }
+
+  /** Clear arm highlight, restoring uniform opacity. */
+  clearHighlight(): void {
+    this.highlightedArm = null;
+    this.applyArmHighlight();
+  }
+
+  private applyArmHighlight(): void {
+    for (const [name, mats] of this.armCloudMaterials) {
+      const dimFactor = this.highlightedArm && name !== this.highlightedArm ? 0.9 : 1.0;
+      for (const mat of mats) {
+        mat.opacity = 0.12 * this.currentOpacity * dimFactor;
+      }
+    }
+  }
+
   private updateAllOpacities(opacity: number): void {
     this.armMaterial.uniforms.opacity.value = opacity;
-    for (const mat of this.cloudMaterials) {
-      mat.opacity = 0.12 * opacity;
+    if (this.highlightedArm) {
+      this.applyArmHighlight();
+    } else {
+      for (const mat of this.cloudMaterials) {
+        mat.opacity = 0.12 * opacity;
+      }
     }
     if (this.bulgeMaterial) {
       this.bulgeMaterial.opacity = 0.35 * opacity;

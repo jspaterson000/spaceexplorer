@@ -22,8 +22,8 @@ export class StarLabels {
   private currentHover: string | null = null;
   private starPositions: Map<string, THREE.Vector3> = new Map();
 
-  constructor(container: HTMLElement, scene: THREE.Scene) {
-    this.scene = scene;
+  constructor(container: HTMLElement, _scene: THREE.Scene) {
+    this.scene = new THREE.Scene();
 
     // Create CSS2D renderer
     this.renderer = new CSS2DRenderer();
