@@ -1,8 +1,13 @@
-# Cosmic Explorer
+# Space Explorer
 
 An interactive 3D visualization of the cosmos. Zoom seamlessly from Earth's surface — tracking 10,000+ real satellites — all the way out to the Milky Way galaxy.
 
 **[Launch the Explorer &rarr;](https://spaceexplorer.io)**
+
+<p align="center">
+  <img src="docs/screenshots/earth.png" width="49%" alt="Planet view — Earth with real-time satellite tracking" />
+  <img src="docs/screenshots/orion-arm.png" width="49%" alt="Orion Arm — 10,000 light-year spiral arm with nebulae" />
+</p>
 
 ## Scale Levels
 
